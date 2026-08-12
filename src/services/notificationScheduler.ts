@@ -174,7 +174,7 @@ export async function showNotification(settings: Settings): Promise<void> {
 
   const options: NotificationOptions = {
     body: message.body,
-    icon: '/favicon.svg',
+    icon: `${import.meta.env.BASE_URL}favicon.svg`,
     tag: NOTIFICATION_TAG,
     requireInteraction: false,
     silent: !settings.soundEnabled,
@@ -216,7 +216,7 @@ export async function showTestNotification(settings: Settings): Promise<boolean>
 
   const options: NotificationOptions = {
     body: message.body,
-    icon: '/favicon.svg',
+    icon: `${import.meta.env.BASE_URL}favicon.svg`,
     tag: `hydration-test-${Date.now()}`,
     requireInteraction: false,
     silent: !settings.soundEnabled,

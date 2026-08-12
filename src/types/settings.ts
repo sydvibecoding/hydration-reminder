@@ -9,7 +9,6 @@ export interface Settings {
   weekendStart: string;
   weekendEnd: string;
   soundEnabled: boolean;
-  vibrationEnabled: boolean;
   pausedUntil: string | null; // ISO timestamp
 }
 
@@ -22,7 +21,6 @@ export const DEFAULT_SETTINGS: Settings = {
   weekendStart: '10:00',
   weekendEnd: '23:00',
   soundEnabled: true,
-  vibrationEnabled: false,
   pausedUntil: null,
 };
 

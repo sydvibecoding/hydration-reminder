@@ -16,11 +16,11 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '44px',
     borderRadius: 'var(--radius-full)',
     border: '1px solid var(--color-separator-opaque)',
-    padding: '6px 10px 6px 7px',
+    padding: '6px 7px 6px 12px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '7px',
+    gap: '8px',
     color: 'var(--color-text-primary)',
     backgroundColor: 'var(--color-bg-secondary)',
   },
@@ -140,7 +140,6 @@ export function ThemePicker({ themes, currentTheme, setTheme }: Props) {
         aria-label={`Cambiar tema (actual: ${currentTheme.name})`}
         title={`Tema: ${currentTheme.name}`}
       >
-        <span aria-hidden="true" style={{ ...styles.triggerSwatch, background: currentTheme.gradient }} />
         <svg
           className="theme-trigger-icon"
           aria-hidden="true"
@@ -159,6 +158,7 @@ export function ThemePicker({ themes, currentTheme, setTheme }: Props) {
           <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z" />
         </svg>
         <span className="theme-trigger-label" style={styles.triggerLabel}>{currentTheme.name}</span>
+        <span aria-hidden="true" style={{ ...styles.triggerSwatch, background: currentTheme.gradient }} />
       </button>
       {open && (
         <div id={popoverId} className="theme-picker-popover" style={styles.popover} role="group" aria-label="Seleccionar tema">

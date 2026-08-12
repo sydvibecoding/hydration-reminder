@@ -208,9 +208,9 @@ Abre la URL en el móvil y en desktop:
   decisión. Solo enruta clicks en notificaciones. Si en el futuro se quiere
   soporte offline, hay que añadir una estrategia stale-while-revalidate y
   subir `SW_VERSION`.
-- Hay un componente `SettingsModal.tsx` en `src/components/` que no lo usa
-  nadie. Vite lo hace tree-shake en producción, no molesta, pero se puede
-  borrar en la próxima limpieza.
 - El manifest declara el icono como `svg+xml`. Chrome y Edge lo aceptan.
   Safari iOS sigue prefiriendo PNGs para el "Add to Home Screen" — para
   máxima calidad ahí, generar PNGs 192/512 y añadirlos al manifest.
+- Las rutas de assets (SW, icono de notificación) se construyen con
+  `import.meta.env.BASE_URL`, así que funcionan tanto en dominio raíz
+  como en subdirectorio (`base` en `vite.config.ts`).
