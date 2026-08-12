@@ -123,7 +123,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 'var(--font-weight-medium)',
     color: 'var(--color-text-tertiary)',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
+    letterSpacing: '0.35px',
     padding: '14px var(--spacing-md) 6px',
     borderTop: '1px solid var(--color-separator)',
     marginTop: '4px',
@@ -168,7 +168,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 'var(--font-weight-regular)',
     color: 'var(--color-text-tertiary)',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
+    letterSpacing: '0.35px',
   },
   summaryHero: {
     fontSize: 'var(--font-size-title1)',
@@ -195,7 +195,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 'var(--font-weight-medium)',
     color: 'var(--color-text-tertiary)',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
+    letterSpacing: '0.35px',
     marginBottom: '10px',
   },
 

@@ -300,15 +300,25 @@ input:focus-visible {
   transform: scale(0.98);
 }
 
+/* Palette icon lives inside the theme trigger — only visible on mobile,
+   where the label is hidden. On desktop the label already conveys purpose. */
+.theme-trigger-icon {
+  display: none;
+}
+
 @media (max-width: 520px) {
   .theme-trigger {
-    width: 44px;
     justify-content: center;
-    padding: 6px !important;
+    padding: 6px 10px !important;
+    gap: 6px !important;
   }
 
   .theme-trigger-label {
     display: none;
+  }
+
+  .theme-trigger-icon {
+    display: block;
   }
 }
 
