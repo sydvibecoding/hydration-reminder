@@ -3,6 +3,10 @@ import { getRandomMessage } from '../data/messages';
 
 const NOTIFICATION_TAG = 'hydration-reminder';
 
+// `renotify` is supported by Chrome's ServiceWorkerRegistration.showNotification
+// but is missing from lib.dom's NotificationOptions.
+type NotifyOptions = NotificationOptions & { renotify?: boolean };
+
 function parseTime(timeStr: string): { hours: number; minutes: number } {
   const [hours, minutes] = timeStr.split(':').map(Number);
   return { hours, minutes };
@@ -172,10 +176,15 @@ export async function showNotification(settings: Settings): Promise<void> {
 
   const message = getRandomMessage();
 
-  const options: NotificationOptions = {
+  const options: NotifyOptions = {
     body: message.body,
     icon: `${import.meta.env.BASE_URL}favicon.svg`,
+    // Reuse the tag so reminders replace each other instead of stacking in the
+    // tray, but renotify so the replacement still pops a banner + sound.
+    // Without renotify, a same-tag replacement lands silently in the Action
+    // Center and the user never sees it.
     tag: NOTIFICATION_TAG,
+    renotify: true,
     requireInteraction: false,
     silent: !settings.soundEnabled,
   };
