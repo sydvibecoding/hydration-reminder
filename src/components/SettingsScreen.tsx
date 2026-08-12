@@ -134,13 +134,6 @@ const styles: Record<string, CSSProperties> = {
   intervalContainer: {
     padding: 'var(--spacing-md)',
   },
-  intervalLabel: {
-    fontSize: 'var(--font-size-subhead)',
-    fontWeight: 'var(--font-weight-regular)',
-    color: 'var(--color-text-secondary)',
-    marginBottom: '12px',
-    letterSpacing: '-0.24px',
-  },
 
   // Summary card (left column)
   summaryCard: {
@@ -527,7 +520,6 @@ export function SettingsScreen({
             <h2 style={styles.sectionHeader}><ClockIcon />Frecuencia</h2>
             <div style={styles.card}>
               <div style={styles.intervalContainer}>
-                <p style={styles.intervalLabel}>Recordar cada</p>
                 <IntervalSelector
                   value={settings.intervalMinutes}
                   onChange={(intervalMinutes) => onUpdateSettings({ intervalMinutes })}
@@ -625,6 +617,10 @@ export function SettingsScreen({
           </div>
         </section>
       </main>
+
+      <footer className="privacy-footer">
+        Tus ajustes se guardan solo en este navegador.
+      </footer>
     </div>
   );
 }

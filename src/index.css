@@ -41,7 +41,6 @@
   --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
 
   /* Font sizes following iOS HIG */
-  --font-size-caption2: 11px;
   --font-size-caption1: 12px;
   --font-size-footnote: 13px;
   --font-size-subhead: 15px;
@@ -401,5 +400,21 @@ input:focus-visible {
   .app-left {
     position: sticky;
     top: 24px;
+  }
+}
+
+/* Privacy trust footer — small, tertiary text at the very bottom of the app */
+.privacy-footer {
+  margin-top: var(--spacing-xxl);
+  padding: 0 var(--card-inline-margin);
+  font-size: var(--font-size-footnote);
+  color: var(--color-text-tertiary);
+  text-align: center;
+  letter-spacing: -0.08px;
+}
+
+@media (min-width: 900px) {
+  .privacy-footer {
+    padding: 0;
   }
 }
