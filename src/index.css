@@ -1,0 +1,347 @@
+:root {
+  /* Theme inputs. useTheme changes these values; semantic surface tokens
+     below keep the selected hue coherent in both color schemes. */
+  --theme-accent: #0A0A0A;
+  --theme-bg-tint: #F5F5F7;
+
+  /* Colors - Neutral, iOS Settings idiom (no tracker/gamified palette) */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-grouped: var(--theme-bg-tint);
+  --color-bg-tertiary: #E9EDF0;
+  --color-surface-border: #D8DCE1;
+
+  /* Accent - restrained monochrome (used only for interactive text) */
+  --color-accent: var(--theme-accent);
+  --color-on-accent: #FFFFFF;
+  --color-accent-subtle: color-mix(in srgb, var(--theme-accent) 10%, #FFFFFF);
+  --color-accent-subtle-hover: color-mix(in srgb, var(--theme-accent) 16%, #FFFFFF);
+  --color-accent-dark: #000000;
+  --color-accent-light: #262626;
+  --color-accent-bg: #F5F5F7;
+
+  /* Text - iOS system colors, tuned for WCAG AA on white and #F5F5F7 */
+  --color-text-primary: #0A0A0A;    /* 19:1 on white — AAA */
+  --color-text-secondary: #3C3C43;  /* 10.6:1 on white — AAA */
+  --color-text-tertiary: #5A5A5F;   /* Remains AA on the strongest light theme tint */
+  --color-text-quaternary: #8E8E93; /* 3.06:1 on #F5F5F7 — AA UI components */
+
+  /* Semantic colors */
+  --color-separator: rgba(60, 60, 67, 0.12);
+  --color-separator-opaque: #C6C6C8;
+  --color-toggle-bg: #E5E5EA;
+  --color-toggle-active: #34C759;
+  --color-destructive: #FF3B30;
+  --color-warning-bg: #FFF3E0;
+  --color-warning-text: #995C00;
+  --color-success-bg: #F5F5F7;
+  --color-success-text: #0A0A0A;
+
+  /* Typography - iOS Dynamic Type */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+
+  /* Font sizes following iOS HIG */
+  --font-size-caption2: 11px;
+  --font-size-caption1: 12px;
+  --font-size-footnote: 13px;
+  --font-size-subhead: 15px;
+  --font-size-body: 17px;
+  --font-size-title3: 20px;
+  --font-size-title2: 22px;
+  --font-size-title1: 28px;
+  --font-size-large-title: 34px;
+
+  /* Font weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing - iOS standard */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+
+  /* Border radius - iOS standard */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  /* Row heights - iOS standard */
+  --row-height: 44px;
+  --row-height-large: 56px;
+
+  /* Inset for grouped tables */
+  --table-inset: 16px;
+
+  /* Card inline margin — flush inside grid columns on desktop */
+  --card-inline-margin: 16px;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --card-inline-margin: 0px;
+  }
+}
+
+/* Dark mode - iOS dark appearance */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-primary: #000000;
+    --color-bg-secondary: color-mix(in srgb, #1C1C1E 94%, var(--theme-accent));
+    --color-bg-grouped: color-mix(in srgb, #000000 88%, var(--theme-accent));
+    --color-bg-tertiary: color-mix(in srgb, #2C2C2E 90%, var(--theme-accent));
+    --color-surface-border: #3A3A3C;
+
+    --color-accent: color-mix(in srgb, var(--theme-accent) 55%, #FFFFFF);
+    --color-on-accent: #0A0A0A;
+    --color-accent-subtle: color-mix(in srgb, var(--theme-accent) 22%, #1C1C1E);
+    --color-accent-subtle-hover: color-mix(in srgb, var(--theme-accent) 32%, #1C1C1E);
+    --color-accent-dark: #FFFFFF;
+    --color-accent-light: #D4D4D8;
+    --color-accent-bg: #262626;
+
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #EBEBF5;
+    --color-text-tertiary: #8E8E93;  /* 6.28:1 on black — AA */
+    --color-text-quaternary: #6E6E73; /* 3.11:1 on black — AA UI components */
+
+    --color-separator: rgba(84, 84, 88, 0.65);
+    --color-separator-opaque: #38383A;
+    --color-toggle-bg: #39393D;
+    --color-warning-bg: #3D2E00;
+    --color-warning-text: #FFD60A;
+    --color-success-bg: #0D3318;
+    --color-success-text: #30D158;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.47;
+  letter-spacing: -0.4px;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-grouped);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+  opacity: 0.7;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+input, select {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+
+/* iOS-style focus states */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.toggle-input:focus-visible {
+  outline: none;
+}
+
+.toggle-input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Interactive hover states — micro-lift where clickable */
+.theme-swatch {
+  transition: transform 0.15s ease;
+}
+.theme-swatch:hover {
+  background-color: var(--color-accent-subtle) !important;
+}
+
+.theme-trigger {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-trigger:hover {
+  background-color: var(--color-bg-tertiary) !important;
+  border-color: var(--color-text-tertiary) !important;
+}
+
+.interval-option {
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.interval-option:not(.is-selected):hover {
+  background-color: color-mix(in srgb, var(--color-bg-tertiary) 88%, var(--color-accent)) !important;
+  box-shadow: inset 0 0 0 1px var(--color-surface-border);
+}
+
+.interval-option.is-selected:hover {
+  background-color: var(--color-accent-subtle-hover) !important;
+}
+
+.time-trigger {
+  transition: background-color 0.15s ease, filter 0.15s ease;
+}
+
+.time-trigger:hover {
+  background-color: color-mix(in srgb, var(--color-bg-tertiary) 88%, var(--color-accent)) !important;
+}
+
+.time-cell {
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.time-cell[aria-pressed="false"]:hover {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+.toggle-slider {
+  transition: background-color 0.25s ease-out !important;
+}
+
+.alert-test-action {
+  transition: background-color 0.15s ease, filter 0.15s ease;
+}
+
+.alert-test-action:hover:not(:disabled) {
+  background-color: var(--color-accent-subtle-hover) !important;
+}
+
+.secondary-action {
+  transition: background-color 0.15s ease, filter 0.15s ease;
+}
+
+.secondary-action:hover {
+  background-color: var(--color-accent-subtle-hover) !important;
+}
+
+@media (max-width: 520px) {
+  .theme-trigger {
+    width: 44px;
+    justify-content: center;
+    padding: 6px !important;
+  }
+
+  .theme-trigger-label {
+    display: none;
+  }
+}
+
+.pause-chip {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.pause-chip:hover {
+  background-color: var(--color-accent-subtle-hover) !important;
+}
+.pause-chip:active {
+  transform: scale(0.96);
+}
+
+.header-action {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.header-action:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-text-tertiary);
+}
+
+.primary-cta {
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.primary-cta:hover {
+  filter: brightness(1.1);
+}
+.primary-cta:active {
+  transform: scale(0.98);
+}
+
+/* App layout — desktop: header full-width, main is dashboard-left + config-right */
+.app-shell {
+  min-height: 100vh;
+  background-color: var(--color-bg-grouped);
+  padding-bottom: 32px;
+}
+
+.app-header {
+  padding: 32px var(--card-inline-margin) 16px;
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.app-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.app-right {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 900px) {
+  .app-shell {
+    max-width: 960px;
+    margin: 0 auto;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .app-header {
+    padding: 40px 0 24px;
+  }
+  .app-main {
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .app-left {
+    position: sticky;
+    top: 24px;
+  }
+}

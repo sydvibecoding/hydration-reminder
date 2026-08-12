@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Solid background so this reads well on any launcher / install prompt.
+       Droplet occupies ~64% of the canvas — safely inside the maskable
+       80% safe-zone (icon can be cropped to a circle without losing the mark). -->
+  <rect width="512" height="512" fill="#F5F5F7"/>
+  <path
+    d="M256 96
+       C256 96 144 240 144 320
+       C144 388 194 432 256 432
+       C318 432 368 388 368 320
+       C368 240 256 96 256 96 Z"
+    fill="#0A0A0A"
+  />
+  <ellipse cx="212" cy="288" rx="34" ry="20" fill="rgba(255,255,255,0.22)" transform="rotate(-20 212 288)"/>
+</svg>
