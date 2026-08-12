@@ -272,6 +272,17 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 'var(--font-size-subhead)',
     fontWeight: 'var(--font-weight-medium)',
   },
+  testActionCluster: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  testStatus: {
+    fontSize: 'var(--font-size-footnote)',
+    color: 'var(--color-text-tertiary)',
+    letterSpacing: '-0.08px',
+    minWidth: 0,
+  },
 };
 
 const DropletMark = () => (
@@ -422,10 +433,16 @@ export function SettingsScreen({
     }
   };
 
+  const [testResult, setTestResult] = useState<'idle' | 'success' | 'failure'>('idle');
+
   const handleTestNotification = async () => {
     setTestState('sending');
-    await onSendTestNotification();
+    setTestResult('idle');
+    const ok = await onSendTestNotification();
     setTestState('idle');
+    setTestResult(ok ? 'success' : 'failure');
+    // Clear the status message after a few seconds so it doesn't linger stale.
+    window.setTimeout(() => setTestResult('idle'), 4000);
   };
 
   return (
@@ -444,12 +461,14 @@ export function SettingsScreen({
 
       <main className="app-main">
         {/* LEFT — status + primary action */}
-        <aside className="app-left">
+        <aside className="app-left" aria-label="Estado y acciones rápidas">
           <div style={styles.summaryCard}>
             <div style={styles.statusRow}>
               <div>
-                <span style={styles.statusLabel}>Recordatorios</span>
-                <span style={styles.statusHint}>
+                <label htmlFor="reminders-switch" id="reminders-label" style={styles.statusLabel}>
+                  Recordatorios
+                </label>
+                <span id="reminders-hint" style={styles.statusHint}>
                   {!settings.enabled
                     ? 'Desactivados'
                     : permission !== 'granted'
@@ -460,14 +479,18 @@ export function SettingsScreen({
                 </span>
               </div>
               <ToggleSwitch
+                id="reminders-switch"
                 checked={settings.enabled}
                 onChange={handleEnabledChange}
-                ariaLabel="Activar recordatorios"
+                ariaLabelledBy="reminders-label"
+                ariaDescribedBy="reminders-hint"
               />
             </div>
-            <div style={styles.summaryEyebrow}>{summary.eyebrow}</div>
-            <div style={styles.summaryHero}>{summary.hero}</div>
-            <div style={styles.summarySub}>{summary.sub}</div>
+            <div aria-live="polite" aria-atomic="true">
+              <div style={styles.summaryEyebrow}>{summary.eyebrow}</div>
+              <div style={styles.summaryHero}>{summary.hero}</div>
+              <div style={styles.summarySub}>{summary.sub}</div>
+            </div>
             {settings.enabled && permission === 'granted' && (
               <>
                 <div style={styles.summaryDivider} />
@@ -477,18 +500,38 @@ export function SettingsScreen({
                   </button>
                 ) : (
                   <>
-                    <p style={styles.quickLabel}>Pausar temporalmente</p>
-                    <div style={styles.pauseGrid}>
-                      <button className="pause-chip" style={styles.pauseButton} onClick={() => onPauseFor(30)}>
+                    <p id="pause-label" style={styles.quickLabel}>Pausar temporalmente</p>
+                    <div style={styles.pauseGrid} role="group" aria-labelledby="pause-label">
+                      <button
+                        className="pause-chip"
+                        style={styles.pauseButton}
+                        onClick={() => onPauseFor(30)}
+                        aria-label="Pausar 30 minutos"
+                      >
                         30 min
                       </button>
-                      <button className="pause-chip" style={styles.pauseButton} onClick={() => onPauseFor(60)}>
+                      <button
+                        className="pause-chip"
+                        style={styles.pauseButton}
+                        onClick={() => onPauseFor(60)}
+                        aria-label="Pausar 1 hora"
+                      >
                         1 hora
                       </button>
-                      <button className="pause-chip" style={styles.pauseButton} onClick={() => onPauseFor(120)}>
+                      <button
+                        className="pause-chip"
+                        style={styles.pauseButton}
+                        onClick={() => onPauseFor(120)}
+                        aria-label="Pausar 2 horas"
+                      >
                         2 horas
                       </button>
-                      <button className="pause-chip" style={styles.pauseButton} onClick={onPauseForRestOfDay}>
+                      <button
+                        className="pause-chip"
+                        style={styles.pauseButton}
+                        onClick={onPauseForRestOfDay}
+                        aria-label="Pausar hasta mañana"
+                      >
                         <MoonIcon /> Hasta mañana
                       </button>
                     </div>
@@ -506,7 +549,7 @@ export function SettingsScreen({
             </div>
           )}
           {settings.enabled && permission === 'denied' && (
-            <div style={styles.notice}>
+            <div style={styles.notice} role="alert">
               Las notificaciones están bloqueadas en este navegador. Actívalas desde los
               ajustes del sitio para recibir recordatorios.
             </div>
@@ -514,7 +557,7 @@ export function SettingsScreen({
         </aside>
 
         {/* RIGHT — visible config */}
-        <section className="app-right">
+        <section className="app-right" aria-label="Ajustes">
           {/* Frecuencia */}
           <div style={{ ...styles.section, ...styles.sectionFirst }}>
             <h2 style={styles.sectionHeader}><ClockIcon />Frecuencia</h2>
@@ -554,13 +597,16 @@ export function SettingsScreen({
                   ...(settings.weekendHoursEnabled ? {} : styles.rowLast),
                 }}
               >
-                <span style={styles.rowLabel}>Horario de fin de semana</span>
+                <label htmlFor="weekend-switch" id="weekend-label" style={styles.rowLabel}>
+                  Horario de fin de semana
+                </label>
                 <ToggleSwitch
+                  id="weekend-switch"
                   checked={settings.weekendHoursEnabled}
                   onChange={(weekendHoursEnabled) =>
                     onUpdateSettings({ weekendHoursEnabled })
                   }
-                  ariaLabel="Usar un horario diferente durante el fin de semana"
+                  ariaLabelledBy="weekend-label"
                 />
               </div>
               {settings.weekendHoursEnabled && (
@@ -595,23 +641,39 @@ export function SettingsScreen({
             <h2 style={styles.sectionHeader}><BellIcon />Alertas</h2>
             <div style={styles.card}>
               <div style={styles.row}>
-                <span style={styles.rowLabel}>Sonido</span>
+                <label htmlFor="sound-switch" id="sound-label" style={styles.rowLabel}>Sonido</label>
                 <ToggleSwitch
+                  id="sound-switch"
                   checked={settings.soundEnabled}
                   onChange={(soundEnabled) => onUpdateSettings({ soundEnabled })}
-                  ariaLabel="Sonido"
+                  ariaLabelledBy="sound-label"
                 />
               </div>
               <div style={{ ...styles.row, ...styles.rowLast }}>
                 <span style={styles.rowLabel}>Notificación de prueba</span>
-                <button
-                  className="alert-test-action"
-                  style={styles.rowAction}
-                  onClick={handleTestNotification}
-                  disabled={testState === 'sending'}
-                >
-                  {testState === 'sending' ? 'Enviando…' : 'Probar'}
-                </button>
+                <div style={styles.testActionCluster}>
+                  <span
+                    style={styles.testStatus}
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    {testResult === 'success'
+                      ? 'Enviada'
+                      : testResult === 'failure'
+                        ? 'No se pudo enviar'
+                        : ''}
+                  </span>
+                  <button
+                    className="alert-test-action"
+                    style={styles.rowAction}
+                    onClick={handleTestNotification}
+                    disabled={testState === 'sending'}
+                    aria-busy={testState === 'sending'}
+                  >
+                    {testState === 'sending' ? 'Enviando…' : 'Probar'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

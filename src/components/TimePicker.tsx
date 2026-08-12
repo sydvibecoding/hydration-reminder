@@ -94,6 +94,7 @@ export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel }: Prop
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const selectedHourRef = useRef<HTMLButtonElement>(null);
   const dialogId = useId();
 
   const minutes = Array.from({ length: Math.floor(60 / minuteStep) }, (_, i) =>
@@ -110,6 +111,10 @@ export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel }: Prop
 
   useEffect(() => {
     if (!open) return;
+    // Move focus into the dialog on open (WAI-ARIA APG dialog pattern).
+    // Focus the currently selected hour cell so keyboard/AT users land
+    // where they can act, not stranded on the trigger outside the dialog.
+    const focusFrame = requestAnimationFrame(() => selectedHourRef.current?.focus());
     const onClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false);
@@ -124,6 +129,7 @@ export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel }: Prop
     document.addEventListener('mousedown', onClickOutside);
     document.addEventListener('keydown', onKeyDown);
     return () => {
+      cancelAnimationFrame(focusFrame);
       document.removeEventListener('mousedown', onClickOutside);
       document.removeEventListener('keydown', onKeyDown);
     };
@@ -156,6 +162,7 @@ export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel }: Prop
               {HOURS.map((hour) => (
                 <button
                   key={hour}
+                  ref={hour === h ? selectedHourRef : undefined}
                   className="time-cell"
                   style={{ ...styles.cell, ...(hour === h ? styles.cellActive : {}) }}
                   onClick={() => onChange(`${hour}:${snappedM}`)}

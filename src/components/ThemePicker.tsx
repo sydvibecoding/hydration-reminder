@@ -135,6 +135,7 @@ export function ThemePicker({ themes, currentTheme, setTheme }: Props) {
         className="theme-trigger"
         style={styles.trigger}
         onClick={() => setOpen(!open)}
+        aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? popoverId : undefined}
         aria-label={`Cambiar tema (actual: ${currentTheme.name})`}
@@ -178,7 +179,6 @@ export function ThemePicker({ themes, currentTheme, setTheme }: Props) {
                 requestAnimationFrame(() => triggerRef.current?.focus());
               }}
               title={t.name}
-              aria-label={t.name}
               aria-pressed={t.id === currentTheme.id}
             >
               <span aria-hidden="true" style={{ ...styles.swatchColor, background: t.gradient }} />

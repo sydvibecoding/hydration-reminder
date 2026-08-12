@@ -4,8 +4,14 @@ interface ToggleSwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
-  /** Screen-reader label — the visual label lives in the row, not the control. */
+  /** Optional id — set when the switch is externally labelled via <label htmlFor>. */
+  id?: string;
+  /** Screen-reader label. Prefer aria-labelledby when a visible label exists. */
   ariaLabel?: string;
+  /** IDs of elements that visually label the switch (e.g. the row title). */
+  ariaLabelledBy?: string;
+  /** IDs of elements that describe the switch's current state or hint. */
+  ariaDescribedBy?: string;
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -59,7 +65,15 @@ const styles: Record<string, CSSProperties> = {
   },
 };
 
-export function ToggleSwitch({ checked, onChange, disabled = false, ariaLabel }: ToggleSwitchProps) {
+export function ToggleSwitch({
+  checked,
+  onChange,
+  disabled = false,
+  id,
+  ariaLabel,
+  ariaLabelledBy,
+  ariaDescribedBy,
+}: ToggleSwitchProps) {
   return (
     <label style={styles.container}>
       <input
@@ -68,7 +82,10 @@ export function ToggleSwitch({ checked, onChange, disabled = false, ariaLabel }:
         checked={checked}
         onChange={(e) => !disabled && onChange(e.target.checked)}
         disabled={disabled}
-        aria-label={ariaLabel}
+        id={id}
+        aria-label={ariaLabelledBy ? undefined : ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
         className="toggle-input"
         style={styles.input}
       />
