@@ -11,7 +11,6 @@ export interface Settings {
   soundEnabled: boolean;
   vibrationEnabled: boolean;
   pausedUntil: string | null; // ISO timestamp
-  onboardingComplete: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,7 +24,6 @@ export const DEFAULT_SETTINGS: Settings = {
   soundEnabled: true,
   vibrationEnabled: false,
   pausedUntil: null,
-  onboardingComplete: false,
 };
 
 export const INTERVAL_OPTIONS: IntervalMinutes[] = [30, 45, 60, 90, 120];

@@ -14,7 +14,7 @@ export const NOTIFICATION_MESSAGES = [
   },
   {
     title: 'Hola, es hora del agua',
-    body: 'Sin prisa, sin presión. Solo un recordatorio amable.',
+    body: 'Cuando te venga bien, un vaso.',
   },
   {
     title: 'Tu momento de agua',
@@ -33,8 +33,8 @@ export const NOTIFICATION_MESSAGES = [
     body: 'Un vaso de agua puede cambiar cómo te sientes. Pruébalo.',
   },
   {
-    title: 'Agua para tu bienestar',
-    body: 'No hay metas, solo cuidado. Toma agua si te apetece.',
+    title: 'Agua',
+    body: 'Un traguito ahora, si te apetece.',
   },
   {
     title: 'Tu cuerpo te habla',
