@@ -259,7 +259,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 export function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if ('serviceWorker' in navigator) {
-    return navigator.serviceWorker.register('/sw.js')
+    return navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
       .then((registration) => {
         console.log('Service Worker registered:', registration.scope);
         return registration;
