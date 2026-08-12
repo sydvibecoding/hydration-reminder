@@ -25,7 +25,6 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 'var(--font-weight-medium)',
     textAlign: 'center' as const,
     borderRadius: '8px',
-    transition: 'all 0.2s ease',
     backgroundColor: 'var(--color-bg-tertiary)',
     color: 'var(--color-text-primary)',
     cursor: 'pointer',

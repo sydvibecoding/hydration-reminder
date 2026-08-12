@@ -64,7 +64,6 @@ const styles: Record<string, CSSProperties> = {
     color: 'var(--color-text-primary)',
     backgroundColor: 'transparent',
     textAlign: 'left',
-    transition: 'transform 0.1s ease',
   },
   swatchActive: {
     backgroundColor: 'var(--color-accent-subtle)',
@@ -137,7 +136,7 @@ export function ThemePicker({ themes, currentTheme, setTheme }: Props) {
         <span className="theme-trigger-label" style={styles.triggerLabel}>{currentTheme.name}</span>
       </button>
       {open && (
-        <div id={popoverId} style={styles.popover} role="group" aria-label="Seleccionar tema">
+        <div id={popoverId} className="theme-picker-popover" style={styles.popover} role="group" aria-label="Seleccionar tema">
           <div style={styles.popoverHeader}>Tema · {currentTheme.name}</div>
           {themes.map((t) => (
             <button

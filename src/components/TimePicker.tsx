@@ -149,7 +149,7 @@ export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel }: Prop
         {h}:{snappedM}
       </button>
       {open && (
-        <div id={dialogId} style={styles.popover} role="dialog" aria-label={ariaLabel}>
+        <div id={dialogId} className="time-picker-popover" style={styles.popover} role="dialog" aria-label={ariaLabel}>
           <div style={styles.column}>
             <div style={styles.columnLabel}>Hora</div>
             <div style={styles.hourGrid} role="group" aria-label="Hora">

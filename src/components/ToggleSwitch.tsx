@@ -33,7 +33,7 @@ const styles: Record<string, CSSProperties> = {
     right: 0,
     height: '31px',
     backgroundColor: 'var(--color-toggle-bg)',
-    transition: 'background-color 0.25s ease-out',
+    transition: 'background-color 250ms var(--ease-out)',
     borderRadius: '15.5px',
   },
   sliderChecked: {
@@ -50,7 +50,7 @@ const styles: Record<string, CSSProperties> = {
     left: '2px',
     top: '2px',
     backgroundColor: '#FFFFFF',
-    transition: 'transform 0.25s ease-out',
+    transition: 'transform 250ms var(--ease-out)',
     borderRadius: '50%',
     boxShadow: '0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16), 0 3px 1px rgba(0, 0, 0, 0.1)',
   },

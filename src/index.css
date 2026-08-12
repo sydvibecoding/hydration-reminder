@@ -80,6 +80,11 @@
 
   /* Card inline margin — flush inside grid columns on desktop */
   --card-inline-margin: 16px;
+
+  /* Easing curves — stronger than built-in ease/ease-out, from easing.dev */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (min-width: 900px) {
@@ -157,15 +162,17 @@ button {
   background: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms var(--ease-out);
 }
 
 button:active {
-  opacity: 0.7;
+  transform: scale(0.97);
 }
 
 button:disabled {
   cursor: default;
   opacity: 0.55;
+  transform: none;
 }
 
 input, select {
@@ -190,70 +197,108 @@ input:focus-visible {
   outline-offset: 3px;
 }
 
-/* Interactive hover states — micro-lift where clickable */
+/* Interactive states — transitions defined once, hover states gated for real pointers */
 .theme-swatch {
-  transition: transform 0.15s ease;
-}
-.theme-swatch:hover {
-  background-color: var(--color-accent-subtle) !important;
+  transition: background-color 150ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
 .theme-trigger {
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.theme-trigger:hover {
-  background-color: var(--color-accent-subtle-hover) !important;
-  border-color: var(--color-text-tertiary) !important;
+  transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
 .interval-option {
-  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
-}
-
-.interval-option:not(.is-selected):hover {
-  background-color: var(--color-accent-subtle-hover) !important;
-  box-shadow: inset 0 0 0 1px var(--color-surface-border);
-}
-
-.interval-option.is-selected:hover {
-  background-color: var(--color-accent-subtle-hover) !important;
+  transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 120ms var(--ease-out) !important;
 }
 
 .time-trigger {
-  transition: background-color 0.15s ease, filter 0.15s ease;
-}
-
-.time-trigger:hover {
-  background-color: var(--color-accent-subtle-hover) !important;
+  transition: background-color 150ms var(--ease-out), filter 150ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
 .time-cell {
-  transition: background-color 0.12s ease, color 0.12s ease;
-}
-
-.time-cell[aria-pressed="false"]:hover {
-  background-color: var(--color-accent-subtle-hover) !important;
+  transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
 .toggle-slider {
-  transition: background-color 0.25s ease-out !important;
+  transition: background-color 250ms var(--ease-out) !important;
 }
 
 .alert-test-action {
-  transition: background-color 0.15s ease, filter 0.15s ease;
-}
-
-.alert-test-action:hover:not(:disabled) {
-  background-color: var(--color-accent-subtle-hover) !important;
+  transition: background-color 150ms var(--ease-out), filter 150ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
 .secondary-action {
-  transition: background-color 0.15s ease, filter 0.15s ease;
+  transition: background-color 150ms var(--ease-out), filter 150ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
-.secondary-action:hover {
-  background-color: var(--color-accent-subtle-hover) !important;
+.pause-chip {
+  transition: background-color 150ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.header-action {
+  transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.primary-cta {
+  transition: filter 150ms var(--ease-out), transform 100ms var(--ease-out);
+}
+
+/* Hover — only on real pointers. Touch devices simulate hover-on-tap → false positives that stick. */
+@media (hover: hover) and (pointer: fine) {
+  .theme-swatch:hover {
+    background-color: var(--color-accent-subtle) !important;
+  }
+
+  .theme-trigger:hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+    border-color: var(--color-text-tertiary) !important;
+  }
+
+  .interval-option:not(.is-selected):hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+    box-shadow: inset 0 0 0 1px var(--color-surface-border);
+  }
+
+  .interval-option.is-selected:hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+  }
+
+  .time-trigger:hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+  }
+
+  .time-cell[aria-pressed="false"]:hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+  }
+
+  .alert-test-action:hover:not(:disabled) {
+    background-color: var(--color-accent-subtle-hover) !important;
+  }
+
+  .secondary-action:hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+  }
+
+  .pause-chip:hover {
+    background-color: var(--color-accent-subtle-hover) !important;
+  }
+
+  .header-action:hover {
+    background-color: var(--color-accent-subtle-hover);
+    border-color: var(--color-text-tertiary);
+  }
+
+  .primary-cta:hover {
+    filter: brightness(1.1);
+  }
+}
+
+/* Per-component press feedback — overrides the global button:active scale where a
+   different amount fits better (larger CTAs are more subtle, small chips are more marked) */
+.pause-chip:active {
+  transform: scale(0.96);
+}
+.primary-cta:active {
+  transform: scale(0.98);
 }
 
 @media (max-width: 520px) {
@@ -268,32 +313,45 @@ input:focus-visible {
   }
 }
 
-.pause-chip {
-  transition: background-color 0.15s ease, transform 0.15s ease;
-}
-.pause-chip:hover {
-  background-color: var(--color-accent-subtle-hover) !important;
-}
-.pause-chip:active {
-  transform: scale(0.96);
-}
-
-.header-action {
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-.header-action:hover {
-  background-color: var(--color-accent-subtle-hover);
-  border-color: var(--color-text-tertiary);
+/* Popover entrance — origin-aware scale from trigger.
+   These render conditionally in React, so @starting-style fires on mount. */
+.theme-picker-popover,
+.time-picker-popover {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  transform-origin: top right;
 }
 
-.primary-cta {
-  transition: filter 0.15s ease, transform 0.1s ease;
+@starting-style {
+  .theme-picker-popover,
+  .time-picker-popover {
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+  }
 }
-.primary-cta:hover {
-  filter: brightness(1.1);
-}
-.primary-cta:active {
-  transform: scale(0.98);
+
+/* Accessibility — reduce/remove motion while keeping opacity + color for comprehension */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  button:active,
+  .pause-chip:active,
+  .primary-cta:active {
+    transform: none;
+  }
+
+  .theme-picker-popover,
+  .time-picker-popover {
+    transform: none;
+  }
 }
 
 /* App layout — desktop: header full-width, main is dashboard-left + config-right */
