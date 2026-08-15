@@ -12,16 +12,33 @@ function parseTime(timeStr: string): { hours: number; minutes: number } {
   return { hours, minutes };
 }
 
-function isWeekend(): boolean {
-  const day = new Date().getDay();
+function isWeekend(date: Date): boolean {
+  const day = date.getDay();
   return day === 0 || day === 6;
 }
 
-function getActiveHours(settings: Settings): { start: string; end: string } {
-  if (settings.weekendHoursEnabled && isWeekend()) {
+// Active hours depend on WHICH day we're asking about, not on today. Scheduling
+// "tomorrow's first reminder" on a Friday night must use the weekend window, and
+// on a Sunday night must use the weekday one.
+function getActiveHoursFor(settings: Settings, date: Date): { start: string; end: string } {
+  if (settings.weekendHoursEnabled && isWeekend(date)) {
     return { start: settings.weekendStart, end: settings.weekendEnd };
   }
   return { start: settings.activeHoursStart, end: settings.activeHoursEnd };
+}
+
+function getActiveHours(settings: Settings): { start: string; end: string } {
+  return getActiveHoursFor(settings, new Date());
+}
+
+// First reminder of the day after `from`, using that day's own schedule.
+function getNextDayStart(settings: Settings, from: Date): Date {
+  const next = new Date(from);
+  next.setDate(next.getDate() + 1);
+  const { start } = getActiveHoursFor(settings, next);
+  const { hours, minutes } = parseTime(start);
+  next.setHours(hours, minutes, 0, 0);
+  return next;
 }
 
 export function isWithinActiveHours(settings: Settings): boolean {
@@ -63,10 +80,7 @@ export function getNextNotificationTime(settings: Settings): Date | null {
     return next;
   } else if (currentMinutes >= endMinutes) {
     // After active hours - schedule for tomorrow's start
-    const next = new Date(now);
-    next.setDate(next.getDate() + 1);
-    next.setHours(startTime.hours, startTime.minutes, 0, 0);
-    return next;
+    return getNextDayStart(settings, now);
   } else {
     // Within active hours - schedule for interval from now
     const next = new Date(now.getTime() + settings.intervalMinutes * 60 * 1000);
@@ -75,10 +89,7 @@ export function getNextNotificationTime(settings: Settings): Date | null {
     const nextMinutes = next.getHours() * 60 + next.getMinutes();
     if (nextMinutes >= endMinutes) {
       // Schedule for tomorrow's start instead
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(startTime.hours, startTime.minutes, 0, 0);
-      return tomorrow;
+      return getNextDayStart(settings, now);
     }
 
     return next;

@@ -9,7 +9,7 @@ import { ThemeState } from '../hooks/useTheme';
 import { DarkModeState } from '../hooks/useDarkMode';
 import { LocaleState } from '../hooks/useLocale';
 import { formatClockString, formatTime } from '../i18n';
-import { getRemainingNotificationsToday } from '../services/notificationScheduler';
+import { getNextNotificationTime, getRemainingNotificationsToday } from '../services/notificationScheduler';
 
 interface SettingsScreenProps {
   settings: Settings;
@@ -390,9 +390,16 @@ export function SettingsScreen({
     const remaining = getRemainingNotificationsToday(settings);
 
     if (remaining.count === 0) {
+      // Read the clock off the scheduled time, not off activeHoursStart — tomorrow
+      // may run on the weekend schedule.
+      const resumesAt = nextNotificationTime ?? getNextNotificationTime(settings);
       return {
         eyebrow: t.restEyebrow,
-        hero: t.tomorrowFrom(formatClockString(settings.activeHoursStart, t.localeTag)),
+        hero: t.tomorrowFrom(
+          resumesAt
+            ? formatClock(resumesAt)
+            : formatClockString(settings.activeHoursStart, t.localeTag)
+        ),
         sub: t.nothingMoreToday,
       };
     }
