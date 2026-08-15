@@ -3,6 +3,24 @@ import type { Messages } from './types';
 export const es: Messages = {
   localeTag: 'es-ES',
 
+  seo: {
+    htmlTitle: 'Recordatorio de hidratación gratis y personalizable',
+    metaDescription:
+      'Programa recordatorios para beber agua, elige tus horarios y frecuencia, y pausa los avisos cuando quieras. Sin cuenta y con ajustes privados.',
+    ogLocale: 'es_ES',
+    ogSiteName: 'Recordatorios de hidratación',
+    ogTitle: 'Recordatorio de hidratación gratis y personalizable',
+    ogDescription:
+      'Programa recordatorios para beber agua a tu ritmo. Sin cuenta y con ajustes privados.',
+    ogImageAlt: 'Recordatorios de hidratación, avisos de agua a tu ritmo',
+    ogImage: 'og-card.png',
+    browserRequirements: 'Requiere un navegador compatible con notificaciones web.',
+    manifestName: 'Recordatorios de hidratación',
+    manifestShortName: 'Hidratación',
+    manifestDescription:
+      'Programa recordatorios para beber agua a tu ritmo, sin cuenta y con ajustes privados.',
+  },
+
   languageName: 'Español',
   languagePickerLabel: 'Idioma',
   languagePickerDialog: 'Seleccionar idioma',

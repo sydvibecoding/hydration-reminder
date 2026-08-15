@@ -3,6 +3,24 @@ import type { Messages } from './types';
 export const en: Messages = {
   localeTag: 'en-US',
 
+  seo: {
+    htmlTitle: 'Free, customisable water reminder',
+    metaDescription:
+      'Set reminders to drink water, pick your hours and frequency, and pause them whenever you want. No account, settings stay on your device.',
+    ogLocale: 'en_US',
+    ogSiteName: 'Hydration reminders',
+    ogTitle: 'Free, customisable water reminder',
+    ogDescription:
+      'Set water reminders at your own pace. No account, settings stay on your device.',
+    ogImageAlt: 'Hydration reminders, water alerts at your own pace',
+    ogImage: 'og-card-en.png',
+    browserRequirements: 'Requires a browser that supports web notifications.',
+    manifestName: 'Hydration reminders',
+    manifestShortName: 'Hydration',
+    manifestDescription:
+      'Set water reminders at your own pace. No account, settings stay on your device.',
+  },
+
   languageName: 'English',
   languagePickerLabel: 'Language',
   languagePickerDialog: 'Select language',

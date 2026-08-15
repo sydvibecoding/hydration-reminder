@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CATALOGUES, LOCALES, STORAGE_KEY, readStoredLocale } from '../i18n';
+import { CATALOGUES, LOCALES, STORAGE_KEY, pathForLocale, readStoredLocale } from '../i18n';
 import type { LocaleId, Messages } from '../i18n';
 
 export interface LocaleState {
@@ -22,8 +22,16 @@ export function useLocale(): LocaleState {
     // Keep the document in sync so assistive tech announces the right language
     // and the browser picks matching hyphenation and quotes.
     document.documentElement.lang = locale;
-    document.title = t.appTitle;
-  }, [locale, t.appTitle]);
+    document.title = t.seo.htmlTitle;
+
+    // Keep the URL on the page that actually serves this language, so copying
+    // the address bar shares the right one. replaceState rather than a
+    // navigation: the switch is instant and there is no reason to reload.
+    const target = pathForLocale(locale);
+    if (location.pathname !== target) {
+      history.replaceState(null, '', target + location.search + location.hash);
+    }
+  }, [locale, t.seo.htmlTitle]);
 
   const setLocale = useCallback((id: LocaleId) => setLocaleId(id), []);
 

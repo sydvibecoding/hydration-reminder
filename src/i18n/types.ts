@@ -13,8 +13,28 @@ export interface NotificationMessage {
   body: string;
 }
 
+// Everything crawlers read. Kept in the catalogue rather than in index.html so
+// the copy has one source: scripts/generate-seo.mjs reads these at build time
+// and emits one HTML entry point per language.
+export interface Seo {
+  htmlTitle: string;
+  metaDescription: string;
+  ogLocale: string;
+  ogSiteName: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImageAlt: string;
+  /** Social card filename in /public. The artwork carries baked-in text. */
+  ogImage: string;
+  browserRequirements: string;
+  manifestName: string;
+  manifestShortName: string;
+  manifestDescription: string;
+}
+
 export interface Messages {
   localeTag: string; // BCP 47 tag passed to Intl.*
+  seo: Seo;
 
   languageName: string;
   languagePickerLabel: string;

@@ -26,8 +26,33 @@ export function detectLocale(): LocaleId {
   return DEFAULT_LOCALE;
 }
 
-/** Stored choice wins over browser detection; detection only seeds first run. */
+/** Base path the app is served from, e.g. "/hydration-reminder/". */
+const BASE = import.meta.env.BASE_URL || '/';
+
+/**
+ * Locale encoded in the URL. Each language is a separate indexable page —
+ * English lives under `<base>/en/` — so the path is authoritative when present.
+ * Spanish is served from the base itself and needs no segment.
+ */
+export function localeFromPath(pathname: string = location.pathname): LocaleId | null {
+  const rest = pathname.startsWith(BASE) ? pathname.slice(BASE.length) : pathname.replace(/^\//, '');
+  const segment = rest.split('/')[0];
+  return isLocaleId(segment) ? segment : null;
+}
+
+/** Path this locale is served from, used when switching language. */
+export function pathForLocale(locale: LocaleId): string {
+  return locale === 'es' ? BASE : `${BASE}${locale}/`;
+}
+
+/**
+ * Resolution order: URL, then stored choice, then browser. The URL wins so a
+ * shared link always opens in the language it advertises, whatever the visitor
+ * picked here before.
+ */
 export function readStoredLocale(): LocaleId {
+  const fromPath = typeof location !== 'undefined' ? localeFromPath() : null;
+  if (fromPath) return fromPath;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isLocaleId(stored)) return stored;

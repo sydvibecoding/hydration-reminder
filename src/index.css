@@ -53,6 +53,11 @@
     var(--md-sys-color-primary-container)
   );
   --selected-option-fg: var(--md-sys-color-on-primary-container);
+  --about-card-bg: color-mix(
+    in srgb,
+    var(--md-sys-color-primary-container) 15%,
+    var(--md-sys-color-surface-container-lowest)
+  );
   /* Shared M3 hover state layer. It follows the active colour scheme while
      preserving each button's own themed container colour. */
   --button-hover-state-color: var(--md-sys-color-on-surface);
@@ -192,7 +197,7 @@
   --selected-option-fg: var(--md-sys-color-on-primary-container);
   --about-card-bg: color-mix(
     in srgb,
-    var(--md-sys-color-primary-container) 50%,
+    var(--md-sys-color-primary-container) 15%,
     var(--md-sys-color-surface-container-lowest)
   );
 }
