@@ -35,3 +35,6 @@ Thumbs.db
 
 # Claude Code local overrides (project-scoped, not shared)
 .claude/settings.local.json
+
+# Pencil design source — rewritten on every editor save
+hidratacion.pen
