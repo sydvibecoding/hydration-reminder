@@ -124,6 +124,22 @@ ${alternates}
     <script type="application/ld+json">${JSON.stringify(faq)}</script>`;
 }
 
+// The fallback sits inside #root and stays painted until React mounts, which
+// reads as a flash of unstyled text on every load. This runs while the head is
+// still parsing, so browsers never paint it. Crawlers that skip JavaScript keep
+// seeing it, which is the whole point of generating it. The timer restores it if
+// the bundle never mounts, so a broken deploy degrades to text, not a blank page.
+const FALLBACK_GUARD = `    <script>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add('js');
+        setTimeout(function () {
+          if (document.getElementById('seo-content')) root.classList.remove('js');
+        }, 4000);
+      })();
+    </script>
+    <style>.js #seo-content { display: none; }</style>`;
+
 // Rendered inside #root. React replaces it on mount; until then it is what
 // crawlers and no-JS visitors get.
 function body(t) {
@@ -236,6 +252,7 @@ async function main() {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+${FALLBACK_GUARD}
 ${head(locale, t, locales)}
     ${assets}
   </head>
