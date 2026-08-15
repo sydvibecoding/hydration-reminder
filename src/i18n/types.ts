@@ -74,6 +74,8 @@ export interface Messages {
   pausedUntil: (clock: string) => string;
   resumeWhenever: string;
   tomorrowFrom: (clock: string) => string;
+  laterFrom: (clock: string) => string;
+  outsideActiveHours: string;
   nothingMoreToday: string;
   soon: string;
   anyTime: string;

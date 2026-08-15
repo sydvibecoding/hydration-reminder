@@ -390,17 +390,29 @@ export function SettingsScreen({
     const remaining = getRemainingNotificationsToday(settings);
 
     if (remaining.count === 0) {
-      // Read the clock off the scheduled time, not off activeHoursStart — tomorrow
-      // may run on the weekend schedule.
+      // Read the clock off the scheduled time, not off activeHoursStart — the next
+      // window may run on the weekend schedule.
       const resumesAt = nextNotificationTime ?? getNextNotificationTime(settings);
+      if (!resumesAt) {
+        return {
+          eyebrow: t.restEyebrow,
+          hero: t.tomorrowFrom(formatClockString(settings.activeHoursStart, t.localeTag)),
+          sub: t.nothingMoreToday,
+        };
+      }
+      // A schedule that runs past midnight can reopen later the same calendar
+      // day, so only say "tomorrow" when the date actually rolls over.
+      const now = new Date();
+      const rollsOver =
+        resumesAt.getFullYear() !== now.getFullYear() ||
+        resumesAt.getMonth() !== now.getMonth() ||
+        resumesAt.getDate() !== now.getDate();
       return {
         eyebrow: t.restEyebrow,
-        hero: t.tomorrowFrom(
-          resumesAt
-            ? formatClock(resumesAt)
-            : formatClockString(settings.activeHoursStart, t.localeTag)
-        ),
-        sub: t.nothingMoreToday,
+        hero: rollsOver
+          ? t.tomorrowFrom(formatClock(resumesAt))
+          : t.laterFrom(formatClock(resumesAt)),
+        sub: rollsOver ? t.nothingMoreToday : t.outsideActiveHours,
       };
     }
 

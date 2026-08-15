@@ -27,73 +27,86 @@ function getActiveHoursFor(settings: Settings, date: Date): { start: string; end
   return { start: settings.activeHoursStart, end: settings.activeHoursEnd };
 }
 
-function getActiveHours(settings: Settings): { start: string; end: string } {
-  return getActiveHoursFor(settings, new Date());
+interface ActiveWindow {
+  start: Date;
+  end: Date;
 }
 
-// First reminder of the day after `from`, using that day's own schedule.
-function getNextDayStart(settings: Settings, from: Date): Date {
-  const next = new Date(from);
-  next.setDate(next.getDate() + 1);
-  const { start } = getActiveHoursFor(settings, next);
-  const { hours, minutes } = parseTime(start);
-  next.setHours(hours, minutes, 0, 0);
-  return next;
+// The window that `day` opens, as absolute timestamps. An end at or before the
+// start means the window runs past midnight and closes on the next day. "00:00"
+// is the common case: midnight closes the day that opened it. Comparing raw
+// minutes-since-midnight instead would read 00:00 as "already over", which
+// silently kills every reminder.
+function windowForDay(settings: Settings, day: Date): ActiveWindow {
+  const { start, end } = getActiveHoursFor(settings, day);
+  const startParts = parseTime(start);
+  const endParts = parseTime(end);
+
+  const startDate = new Date(day);
+  startDate.setHours(startParts.hours, startParts.minutes, 0, 0);
+
+  const endDate = new Date(day);
+  endDate.setHours(endParts.hours, endParts.minutes, 0, 0);
+  if (endDate.getTime() <= startDate.getTime()) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+
+  return { start: startDate, end: endDate };
+}
+
+// The window containing `at`, or null if `at` falls between windows. Checks
+// yesterday's window too, because an overnight one may still be open.
+function windowAt(settings: Settings, at: Date): ActiveWindow | null {
+  const yesterday = new Date(at);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  for (const day of [yesterday, at]) {
+    const w = windowForDay(settings, day);
+    if (at.getTime() >= w.start.getTime() && at.getTime() < w.end.getTime()) {
+      return w;
+    }
+  }
+  return null;
+}
+
+// The first window that opens strictly after `at`. Each day carries its own
+// schedule, so a Friday night lookup lands on the weekend window.
+function windowAfter(settings: Settings, at: Date): ActiveWindow {
+  const day = new Date(at);
+  for (let i = 0; i < 8; i++) {
+    const w = windowForDay(settings, day);
+    if (w.start.getTime() > at.getTime()) return w;
+    day.setDate(day.getDate() + 1);
+  }
+  return windowForDay(settings, day);
 }
 
 export function isWithinActiveHours(settings: Settings): boolean {
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-  const { start, end } = getActiveHours(settings);
-  const startTime = parseTime(start);
-  const endTime = parseTime(end);
-
-  const startMinutes = startTime.hours * 60 + startTime.minutes;
-  const endMinutes = endTime.hours * 60 + endTime.minutes;
-
-  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  return windowAt(settings, new Date()) !== null;
 }
 
 export function getNextNotificationTime(settings: Settings): Date | null {
   if (!settings.enabled) return null;
 
+  const now = new Date();
+
   // Check if paused
-  if (settings.pausedUntil && new Date(settings.pausedUntil) > new Date()) {
+  if (settings.pausedUntil && new Date(settings.pausedUntil) > now) {
     return new Date(settings.pausedUntil);
   }
 
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const current = windowAt(settings, now);
 
-  const { start, end } = getActiveHours(settings);
-  const startTime = parseTime(start);
-  const endTime = parseTime(end);
+  // Between windows - wait for the next one to open
+  if (!current) return windowAfter(settings, now).start;
 
-  const startMinutes = startTime.hours * 60 + startTime.minutes;
-  const endMinutes = endTime.hours * 60 + endTime.minutes;
-
-  if (currentMinutes < startMinutes) {
-    // Before active hours - schedule for start time
-    const next = new Date(now);
-    next.setHours(startTime.hours, startTime.minutes, 0, 0);
-    return next;
-  } else if (currentMinutes >= endMinutes) {
-    // After active hours - schedule for tomorrow's start
-    return getNextDayStart(settings, now);
-  } else {
-    // Within active hours - schedule for interval from now
-    const next = new Date(now.getTime() + settings.intervalMinutes * 60 * 1000);
-
-    // But don't go past end time
-    const nextMinutes = next.getHours() * 60 + next.getMinutes();
-    if (nextMinutes >= endMinutes) {
-      // Schedule for tomorrow's start instead
-      return getNextDayStart(settings, now);
-    }
-
-    return next;
+  // Inside a window - one interval from now, unless that overshoots the close
+  const next = new Date(now.getTime() + settings.intervalMinutes * 60 * 1000);
+  if (next.getTime() >= current.end.getTime()) {
+    return windowAfter(settings, now).start;
   }
+
+  return next;
 }
 
 export function getTimeUntilNextNotification(settings: Settings): number | null {
@@ -103,37 +116,43 @@ export function getTimeUntilNextNotification(settings: Settings): number | null 
 }
 
 // Count reminders still scheduled for today, and when the last one fires.
-// Returns { count: 0, last: null } if we're past active hours (next is tomorrow),
-// disabled, or paused.
+// Returns { count: 0, last: null } when the next reminder falls on a later
+// calendar day, or when reminders are disabled or paused. Counting runs to the
+// end of the window the next reminder belongs to, which may be past midnight.
 export function getRemainingNotificationsToday(settings: Settings): {
   count: number;
   last: Date | null;
 } {
   if (!settings.enabled) return { count: 0, last: null };
-  if (settings.pausedUntil && new Date(settings.pausedUntil) > new Date()) {
+
+  const now = new Date();
+  if (settings.pausedUntil && new Date(settings.pausedUntil) > now) {
     return { count: 0, last: null };
   }
 
   const next = getNextNotificationTime(settings);
   if (!next) return { count: 0, last: null };
 
-  const now = new Date();
+  // `next` always lands inside a window - either the open one or the start of
+  // the one after it.
+  const window = windowAt(settings, next);
+  if (!window) return { count: 0, last: null };
+
   const isSameDay =
     next.getFullYear() === now.getFullYear() &&
     next.getMonth() === now.getMonth() &&
     next.getDate() === now.getDate();
-  if (!isSameDay) return { count: 0, last: null };
 
-  const { end } = getActiveHours(settings);
-  const [endH, endM] = end.split(':').map(Number);
-  const endTime = new Date(now);
-  endTime.setHours(endH, endM, 0, 0);
+  // Reminders in the window we're already sitting in still count as "today",
+  // even once the clock rolls past midnight on an overnight schedule.
+  const current = windowAt(settings, now);
+  const isSameWindow = current !== null && current.start.getTime() === window.start.getTime();
 
-  const remainingMs = endTime.getTime() - next.getTime();
-  if (remainingMs <= 0) return { count: 1, last: next };
+  if (!isSameDay && !isSameWindow) return { count: 0, last: null };
 
   const intervalMs = settings.intervalMinutes * 60 * 1000;
-  const count = Math.floor((remainingMs - 1) / intervalMs) + 1;
+  const remainingMs = window.end.getTime() - next.getTime();
+  const count = Math.ceil(remainingMs / intervalMs);
   const last = new Date(next.getTime() + (count - 1) * intervalMs);
 
   return { count, last };
