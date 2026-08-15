@@ -1,6 +1,8 @@
 import { useSettings } from './hooks/useSettings';
 import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
+import { useDarkMode } from './hooks/useDarkMode';
+import { useLocale } from './hooks/useLocale';
 import { SettingsScreen } from './components/SettingsScreen';
 
 function App() {
@@ -21,6 +23,8 @@ function App() {
   } = useNotifications(settings);
 
   const themeState = useTheme();
+  const darkMode = useDarkMode();
+  const localeState = useLocale();
 
   return (
     <SettingsScreen
@@ -35,6 +39,8 @@ function App() {
       onPauseForRestOfDay={pauseForRestOfDay}
       onResume={resumeNotifications}
       themeState={themeState}
+      darkMode={darkMode}
+      localeState={localeState}
     />
   );
 }

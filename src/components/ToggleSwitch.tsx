@@ -1,70 +1,21 @@
-import { CSSProperties } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ToggleSwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
-  /** Optional id — set when the switch is externally labelled via <label htmlFor>. */
   id?: string;
-  /** Screen-reader label. Prefer aria-labelledby when a visible label exists. */
   ariaLabel?: string;
-  /** IDs of elements that visually label the switch (e.g. the row title). */
   ariaLabelledBy?: string;
-  /** IDs of elements that describe the switch's current state or hint. */
   ariaDescribedBy?: string;
 }
 
-const styles: Record<string, CSSProperties> = {
-  container: {
-    position: 'relative',
-    width: '51px',
-    height: '44px',
-    flexShrink: 0,
-  },
-  input: {
-    opacity: 0,
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    inset: 0,
-    zIndex: 2,
-    cursor: 'pointer',
-    margin: 0,
-  },
-  slider: {
-    position: 'absolute',
-    cursor: 'pointer',
-    top: '6.5px',
-    left: 0,
-    right: 0,
-    height: '31px',
-    backgroundColor: 'var(--color-toggle-bg)',
-    transition: 'background-color 250ms var(--ease-out)',
-    borderRadius: '15.5px',
-  },
-  sliderChecked: {
-    backgroundColor: 'var(--color-accent)',
-  },
-  sliderDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  },
-  knob: {
-    position: 'absolute',
-    height: '27px',
-    width: '27px',
-    left: '2px',
-    top: '2px',
-    backgroundColor: '#FFFFFF',
-    transition: 'transform 250ms var(--ease-out)',
-    borderRadius: '50%',
-    boxShadow: '0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16), 0 3px 1px rgba(0, 0, 0, 0.1)',
-  },
-  knobChecked: {
-    transform: 'translateX(20px)',
-  },
-};
-
+/**
+ * Thin React wrapper over <md-switch>. Keeps the original component API so
+ * SettingsScreen call sites don't change. React 18 + Lit interop: we set
+ * `selected` imperatively (the Lit reflection needs the property, not the
+ * attribute) and listen to the switch's `input` event.
+ */
 export function ToggleSwitch({
   checked,
   onChange,
@@ -74,36 +25,40 @@ export function ToggleSwitch({
   ariaLabelledBy,
   ariaDescribedBy,
 }: ToggleSwitchProps) {
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = ref.current as (HTMLElement & { selected?: boolean; ariaLabel?: string }) | null;
+    if (!el) return;
+    if (el.selected !== checked) el.selected = checked;
+    // Material Web exposes ARIA reflection as element properties. React's
+    // attribute assignment alone does not reliably reach ElementInternals,
+    // which otherwise leaves the rendered switch unnamed in the AX tree.
+    const referencedLabel = ariaLabelledBy
+      ? document.getElementById(ariaLabelledBy)?.textContent?.trim()
+      : undefined;
+    el.ariaLabel = ariaLabel ?? referencedLabel ?? '';
+  }, [checked, ariaLabel, ariaLabelledBy, ariaDescribedBy]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const handle = (e: Event) => {
+      const target = e.target as HTMLElement & { selected?: boolean };
+      onChange(!!target.selected);
+    };
+    el.addEventListener('input', handle);
+    return () => el.removeEventListener('input', handle);
+  }, [onChange]);
+
   return (
-    <label style={styles.container}>
-      <input
-        type="checkbox"
-        role="switch"
-        checked={checked}
-        onChange={(e) => !disabled && onChange(e.target.checked)}
-        disabled={disabled}
-        id={id}
-        aria-label={ariaLabelledBy ? undefined : ariaLabel}
-        aria-labelledby={ariaLabelledBy}
-        aria-describedby={ariaDescribedBy}
-        className="toggle-input"
-        style={styles.input}
-      />
-      <span
-        className="toggle-slider"
-        style={{
-          ...styles.slider,
-          ...(checked ? styles.sliderChecked : {}),
-          ...(disabled ? styles.sliderDisabled : {}),
-        }}
-      >
-        <span
-          style={{
-            ...styles.knob,
-            ...(checked ? styles.knobChecked : {}),
-          }}
-        />
-      </span>
-    </label>
+    <md-switch
+      ref={ref}
+      id={id}
+      disabled={disabled || undefined}
+      aria-label={ariaLabelledBy ? undefined : ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+    />
   );
 }

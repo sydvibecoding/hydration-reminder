@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#F5F5F7"/>
+  <rect x="52" y="52" width="1096" height="526" rx="56" fill="#EEEEF0"/>
+  <circle cx="962" cy="315" r="150" fill="#E5E5E7"/>
+  <path d="M962 192C962 192 875 303 875 365C875 418 914 452 962 452C1010 452 1049 418 1049 365C1049 303 962 192 962 192Z" fill="#0A0A0A"/>
+  <ellipse cx="928" cy="340" rx="27" ry="16" fill="#FFFFFF" fill-opacity="0.22" transform="rotate(-20 928 340)"/>
+
+  <rect x="104" y="114" width="204" height="42" rx="21" fill="#D8D8DC"/>
+  <text x="206" y="142" text-anchor="middle" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#0A0A0A" letter-spacing="1.5">GRATIS · PRIVADO</text>
+  <text x="104" y="252" font-family="Arial, sans-serif" font-size="66" font-weight="700" fill="#0A0A0A">Recordatorios</text>
+  <text x="104" y="326" font-family="Arial, sans-serif" font-size="66" font-weight="700" fill="#0A0A0A">de hidratación</text>
+  <text x="104" y="402" font-family="Arial, sans-serif" font-size="30" font-weight="400" fill="#4B5563">Avisos de agua a tu ritmo.</text>
+  <text x="104" y="448" font-family="Arial, sans-serif" font-size="30" font-weight="400" fill="#4B5563">Sin cuenta y con ajustes privados.</text>
+
+  <circle cx="116" cy="516" r="12" fill="#DB2777"/>
+  <circle cx="150" cy="516" r="12" fill="#047857"/>
+  <circle cx="184" cy="516" r="12" fill="#0369A1"/>
+  <circle cx="218" cy="516" r="12" fill="#6D28D9"/>
+</svg>

@@ -1,200 +1,210 @@
-import { useState, useRef, useEffect, useId, CSSProperties } from 'react';
+import { useEffect, useRef, useState, CSSProperties } from 'react';
+import { formatClockString, parseClock, toClockString, usesTwelveHourClock } from '../i18n';
+import type { Messages } from '../i18n';
 
 interface Props {
-  value: string;
+  value: string; // stored format, always 24-hour "HH:MM"
   onChange: (value: string) => void;
   minuteStep?: number;
   ariaLabel: string;
+  t: Messages;
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+// Material 3 time picker, input (keyboard) variant.
+//
+// M3 specifies two time pickers: dial and input. @material/web ships neither,
+// so this composes the input variant from the components it does ship —
+// md-dialog for the container, focus trap and scrim, md-outlined-text-field for
+// the hour and minute entries, md-outlined-segmented-button-set for AM/PM.
+//
+// The fields are uncontrolled: values are seeded imperatively when the dialog
+// opens and read back on confirm. React state per keystroke would fight the
+// web components' own value property.
 
 const styles: Record<string, CSSProperties> = {
-  container: {
-    position: 'relative',
-    display: 'inline-block',
-  },
+  container: { position: 'relative', display: 'inline-block' },
   trigger: {
-    backgroundColor: 'var(--color-bg-tertiary)',
+    backgroundColor: 'var(--md-sys-color-secondary-container)',
     border: 'none',
     borderRadius: 'var(--radius-sm)',
     padding: '6px 12px',
     fontSize: 'var(--font-size-body)',
-    color: 'var(--color-text-primary)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--md-sys-color-on-secondary-container)',
     cursor: 'pointer',
     letterSpacing: '-0.4px',
     fontFamily: 'inherit',
     fontVariantNumeric: 'tabular-nums',
-    minWidth: '72px',
+    minWidth: '84px',
     textAlign: 'center',
   },
-  popover: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: '6px',
-    backgroundColor: 'var(--color-bg-secondary)',
-    border: '1px solid var(--color-surface-border)',
-    borderRadius: 'var(--radius-lg)',
-    boxShadow: '0 8px 28px rgba(0, 0, 0, 0.14)',
-    padding: '12px',
+  fieldRow: {
     display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
     gap: '12px',
-    zIndex: 100,
+    paddingTop: '8px',
   },
-  column: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  columnLabel: {
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
+  fieldCaption: {
     fontSize: 'var(--font-size-caption1)',
-    color: 'var(--color-text-tertiary)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    marginBottom: '6px',
+    color: 'var(--md-sys-color-on-surface-variant)',
     paddingLeft: '2px',
   },
-  hourGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 34px)',
-    gap: '2px',
-  },
-  minuteGrid: {
-    display: 'grid',
-    gridTemplateColumns: '38px',
-    gap: '2px',
-  },
-  cell: {
-    minHeight: '28px',
-    padding: '4px 6px',
-    fontSize: 'var(--font-size-subhead)',
-    color: 'var(--color-text-primary)',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: 'var(--radius-sm)',
-    cursor: 'pointer',
-    textAlign: 'center',
+  separator: {
+    fontSize: '38px',
+    lineHeight: '68px',
+    color: 'var(--md-sys-color-on-surface)',
     fontVariantNumeric: 'tabular-nums',
-    letterSpacing: '-0.24px',
-    fontFamily: 'inherit',
   },
-  cellActive: {
-    backgroundColor: 'var(--color-accent)',
-    color: 'var(--color-on-accent)',
-    fontWeight: 'var(--font-weight-semibold)',
-  },
-  divider: {
-    width: '1px',
-    backgroundColor: 'var(--color-separator)',
-    margin: '18px 0 4px',
-  },
+  periodSet: { display: 'flex', flexDirection: 'column', paddingTop: '4px' },
 };
 
-export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel }: Props) {
+// M3 input variant: 96x72 fields showing display-medium numerals.
+const FIELD_STYLE: CSSProperties = {
+  width: '96px',
+  ['--md-outlined-text-field-container-shape' as string]: '8px',
+  ['--md-outlined-text-field-input-text-size' as string]: '38px',
+  ['--md-outlined-text-field-input-text-line-height' as string]: '44px',
+};
+
+function clamp(value: number, min: number, max: number): number {
+  if (Number.isNaN(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+export function TimePicker({ value, onChange, minuteStep = 1, ariaLabel, t }: Props) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isPm, setIsPm] = useState(false);
+
+  const dialogRef = useRef<HTMLElement>(null);
+  const hourRef = useRef<HTMLElement>(null);
+  const minuteRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const selectedHourRef = useRef<HTMLButtonElement>(null);
-  const dialogId = useId();
 
-  const minutes = Array.from({ length: Math.floor(60 / minuteStep) }, (_, i) =>
-    (i * minuteStep).toString().padStart(2, '0')
-  );
-  const [h, m] = value.split(':');
-  const snappedM = minutes.includes(m)
-    ? m
-    : minutes.reduce((closest, current) =>
-        Math.abs(Number(current) - Number(m)) < Math.abs(Number(closest) - Number(m))
-          ? current
-          : closest,
-      minutes[0]);
+  const twelveHour = usesTwelveHourClock(t.localeTag);
+  const display = formatClockString(value, t.localeTag);
 
+  // Seed the fields from the stored value each time the dialog opens, so a
+  // cancelled edit leaves no residue behind.
   useEffect(() => {
     if (!open) return;
-    // Move focus into the dialog on open (WAI-ARIA APG dialog pattern).
-    // Focus the currently selected hour cell so keyboard/AT users land
-    // where they can act, not stranded on the trigger outside the dialog.
-    const focusFrame = requestAnimationFrame(() => selectedHourRef.current?.focus());
-    const onClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
+    const { hour, minute } = parseClock(value);
+    const shownHour = twelveHour ? hour % 12 || 12 : hour;
+    setIsPm(hour >= 12);
+    const frame = requestAnimationFrame(() => {
+      const h = hourRef.current as (HTMLElement & { value: string }) | null;
+      const m = minuteRef.current as (HTMLElement & { value: string }) | null;
+      if (h) h.value = twelveHour ? String(shownHour) : String(shownHour).padStart(2, '0');
+      if (m) m.value = String(minute).padStart(2, '0');
+      (h as HTMLElement | null)?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, value, twelveHour]);
+
+  // md-dialog owns its own open state and animations; drive it imperatively and
+  // mirror its `closed` event back into React so Escape and scrim clicks agree.
+  useEffect(() => {
+    const dialog = dialogRef.current as
+      | (HTMLElement & { open: boolean })
+      | null;
+    if (!dialog) return;
+    dialog.open = open;
+    const onClosed = () => {
+      setOpen(false);
+      triggerRef.current?.focus();
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      cancelAnimationFrame(focusFrame);
-      document.removeEventListener('mousedown', onClickOutside);
-      document.removeEventListener('keydown', onKeyDown);
-    };
+    dialog.addEventListener('closed', onClosed);
+    return () => dialog.removeEventListener('closed', onClosed);
   }, [open]);
 
-  const closeAndRestoreFocus = () => {
+  const confirm = () => {
+    const h = hourRef.current as (HTMLElement & { value: string }) | null;
+    const m = minuteRef.current as (HTMLElement & { value: string }) | null;
+    let hour = clamp(Number(h?.value), twelveHour ? 1 : 0, twelveHour ? 12 : 23);
+    let minute = clamp(Number(m?.value), 0, 59);
+
+    if (minuteStep > 1) {
+      minute = Math.min(59, Math.round(minute / minuteStep) * minuteStep);
+    }
+    if (twelveHour) {
+      hour = hour % 12 + (isPm ? 12 : 0);
+    }
+    onChange(toClockString(hour, minute));
     setOpen(false);
-    requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
   return (
-    <div ref={containerRef} style={styles.container}>
+    <div style={styles.container}>
       <button
         ref={triggerRef}
         className="time-trigger"
         style={styles.trigger}
-        onClick={() => setOpen(!open)}
-        aria-label={`${ariaLabel}: ${h}:${snappedM}`}
+        onClick={() => setOpen(true)}
+        aria-label={`${ariaLabel}: ${display}`}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-controls={open ? dialogId : undefined}
       >
-        {h}:{snappedM}
+        {display}
       </button>
-      {open && (
-        <div id={dialogId} className="time-picker-popover" style={styles.popover} role="dialog" aria-label={ariaLabel}>
-          <div style={styles.column}>
-            <div style={styles.columnLabel}>Hora</div>
-            <div style={styles.hourGrid} role="group" aria-label="Hora">
-              {HOURS.map((hour) => (
-                <button
-                  key={hour}
-                  ref={hour === h ? selectedHourRef : undefined}
-                  className="time-cell"
-                  style={{ ...styles.cell, ...(hour === h ? styles.cellActive : {}) }}
-                  onClick={() => onChange(`${hour}:${snappedM}`)}
-                  aria-pressed={hour === h}
-                >
-                  {hour}
-                </button>
-              ))}
+
+      <md-dialog ref={dialogRef} aria-label={ariaLabel}>
+        <div slot="headline">{t.timePickerHeadline}</div>
+        <form slot="content" method="dialog" onSubmit={(e) => e.preventDefault()}>
+          <div style={styles.fieldRow}>
+            <div style={styles.fieldGroup}>
+              <md-outlined-text-field
+                ref={hourRef}
+                style={FIELD_STYLE}
+                type="number"
+                inputmode="numeric"
+                min={twelveHour ? '1' : '0'}
+                max={twelveHour ? '12' : '23'}
+                aria-label={t.hour}
+                no-spinner
+              />
+              <span style={styles.fieldCaption}>{t.hour}</span>
             </div>
-          </div>
-          <div aria-hidden="true" style={styles.divider} />
-          <div style={styles.column}>
-            <div style={styles.columnLabel}>Min</div>
-            <div style={styles.minuteGrid} role="group" aria-label="Minutos">
-              {minutes.map((minute) => (
-                <button
-                  key={minute}
-                  className="time-cell"
-                  style={{ ...styles.cell, ...(minute === snappedM ? styles.cellActive : {}) }}
-                  onClick={() => {
-                    onChange(`${h}:${minute}`);
-                    closeAndRestoreFocus();
-                  }}
-                  aria-pressed={minute === snappedM}
-                >
-                  {minute}
-                </button>
-              ))}
+
+            <span aria-hidden="true" style={styles.separator}>:</span>
+
+            <div style={styles.fieldGroup}>
+              <md-outlined-text-field
+                ref={minuteRef}
+                style={FIELD_STYLE}
+                type="number"
+                inputmode="numeric"
+                min="0"
+                max="59"
+                aria-label={t.minute}
+                no-spinner
+              />
+              <span style={styles.fieldCaption}>{t.minute}</span>
             </div>
+
+            {twelveHour && (
+              <div style={styles.periodSet}>
+                <md-outlined-segmented-button-set aria-label={`${t.am} / ${t.pm}`}>
+                  <md-outlined-segmented-button
+                    label={t.am}
+                    selected={!isPm}
+                    onClick={() => setIsPm(false)}
+                  />
+                  <md-outlined-segmented-button
+                    label={t.pm}
+                    selected={isPm}
+                    onClick={() => setIsPm(true)}
+                  />
+                </md-outlined-segmented-button-set>
+              </div>
+            )}
           </div>
+        </form>
+        <div slot="actions">
+          <md-text-button onClick={() => setOpen(false)}>{t.cancel}</md-text-button>
+          <md-text-button onClick={confirm}>{t.ok}</md-text-button>
         </div>
-      )}
+      </md-dialog>
     </div>
   );
 }

@@ -4,7 +4,11 @@ import { ToggleSwitch } from './ToggleSwitch';
 import { IntervalSelector } from './IntervalSelector';
 import { TimePicker } from './TimePicker';
 import { ThemePicker } from './ThemePicker';
+import { LanguagePicker } from './LanguagePicker';
 import { ThemeState } from '../hooks/useTheme';
+import { DarkModeState } from '../hooks/useDarkMode';
+import { LocaleState } from '../hooks/useLocale';
+import { formatClockString, formatTime } from '../i18n';
 import { getRemainingNotificationsToday } from '../services/notificationScheduler';
 
 interface SettingsScreenProps {
@@ -19,7 +23,13 @@ interface SettingsScreenProps {
   onPauseForRestOfDay: () => void;
   onResume: () => void;
   themeState: ThemeState;
+  darkMode: DarkModeState;
+  localeState: LocaleState;
 }
+
+// Icons stay in code rather than in the catalogues: they are presentational and
+// identical across languages. Indexed to match the FAQ entry order.
+const FAQ_ICONS = ['tune', 'person_off', 'lock'];
 
 const styles: Record<string, CSSProperties> = {
   // Header
@@ -34,15 +44,26 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: '10px',
   },
-  droplet: {
-    width: 'var(--font-size-large-title)',
-    height: 'var(--font-size-large-title)',
-    color: 'var(--color-accent)',
-    display: 'block',
+  logoMark: {
+    width: '40px',
+    height: '40px',
+    display: 'grid',
+    placeItems: 'center',
+    flexShrink: 0,
+    color: 'var(--md-sys-color-primary)',
+    backgroundColor: 'var(--md-sys-color-primary-container)',
+    borderRadius: 'var(--md-sys-shape-corner-full)',
+  },
+  logoIcon: {
+    width: '24px',
+    height: '24px',
+    fontSize: '24px',
+    fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24",
   },
   title: {
+    fontFamily: 'var(--font-family)',
     fontSize: 'var(--font-size-large-title)',
-    fontWeight: 'var(--font-weight-semibold)',
+    fontWeight: 'var(--font-weight-regular)',
     color: 'var(--color-text-primary)',
     letterSpacing: '-0.4px',
     lineHeight: 1.15,
@@ -60,28 +81,19 @@ const styles: Record<string, CSSProperties> = {
   sectionFirst: {
     marginTop: 0,
   },
-  sectionHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: 'var(--font-size-footnote)',
-    fontWeight: 'var(--font-weight-regular)',
-    color: 'var(--color-text-tertiary)',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '-0.08px',
-    marginBottom: '8px',
+  sectionTitle: {
+    fontSize: 'var(--font-size-body)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--md-sys-color-on-surface)',
+    letterSpacing: '-0.1px',
+    marginBottom: '10px',
     paddingLeft: 'var(--spacing-md)',
     marginLeft: 'var(--card-inline-margin)',
-  },
-  sectionHeaderIcon: {
-    width: '13px',
-    height: '13px',
-    display: 'block',
   },
   sectionFooter: {
     fontSize: 'var(--font-size-footnote)',
     fontWeight: 'var(--font-weight-regular)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-surface-variant)',
     marginTop: '8px',
     padding: '6px var(--spacing-lg)',
     marginLeft: 'var(--card-inline-margin)',
@@ -92,12 +104,11 @@ const styles: Record<string, CSSProperties> = {
 
   // Cards (right column) — no overflow:hidden so TimePicker popover can escape
   card: {
-    backgroundColor: 'var(--color-bg-secondary)',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--color-surface-border)',
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+    borderRadius: 'var(--md-sys-shape-corner-extra-large)',
     marginLeft: 'var(--card-inline-margin)',
     marginRight: 'var(--card-inline-margin)',
+    overflow: 'hidden',
   },
   row: {
     display: 'flex',
@@ -113,15 +124,28 @@ const styles: Record<string, CSSProperties> = {
   },
   rowLabel: {
     fontSize: 'var(--font-size-body)',
-    fontWeight: 'var(--font-weight-regular)',
+    fontWeight: 'var(--font-weight-medium)',
     color: 'var(--color-text-primary)',
     letterSpacing: '-0.4px',
+  },
+  rowLeading: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    minWidth: 0,
+  },
+  rowIcon: {
+    color: 'var(--md-sys-color-on-surface-variant)',
+    fontSize: '20px',
+    width: '20px',
+    height: '20px',
+    flexShrink: 0,
   },
   // Sub-group header inside a card (visually groups nested rows)
   subGroupHeader: {
     fontSize: 'var(--font-size-caption1)',
     fontWeight: 'var(--font-weight-medium)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-surface-variant)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.35px',
     padding: '14px var(--spacing-md) 6px',
@@ -137,11 +161,9 @@ const styles: Record<string, CSSProperties> = {
 
   // Summary card (left column)
   summaryCard: {
-    backgroundColor: 'var(--color-bg-secondary)',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--color-surface-border)',
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-    padding: '20px',
+    backgroundColor: 'var(--md-sys-color-primary-container)',
+    borderRadius: 'var(--md-sys-shape-corner-extra-large)',
+    padding: '24px',
     marginLeft: 'var(--card-inline-margin)',
     marginRight: 'var(--card-inline-margin)',
   },
@@ -155,45 +177,46 @@ const styles: Record<string, CSSProperties> = {
   statusLabel: {
     fontSize: 'var(--font-size-body)',
     fontWeight: 'var(--font-weight-medium)',
-    color: 'var(--color-text-primary)',
+    color: 'var(--md-sys-color-on-primary-container)',
   },
   statusHint: {
     display: 'block',
     marginTop: '2px',
     fontSize: 'var(--font-size-footnote)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-primary-container)',
   },
   summaryEyebrow: {
     fontSize: 'var(--font-size-footnote)',
     fontWeight: 'var(--font-weight-regular)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-primary-container)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.35px',
   },
   summaryHero: {
+    fontFamily: 'var(--font-family-display)',
     fontSize: 'var(--font-size-title1)',
-    fontWeight: 'var(--font-weight-semibold)',
-    color: 'var(--color-text-primary)',
-    letterSpacing: '-0.4px',
-    lineHeight: 1.15,
+    fontWeight: 'var(--font-weight-regular)',
+    color: 'var(--md-sys-color-on-primary-container)',
+    letterSpacing: '-1.2px',
+    lineHeight: 1.1,
     marginTop: '6px',
   },
   summarySub: {
     fontSize: 'var(--font-size-subhead)',
     fontWeight: 'var(--font-weight-regular)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-primary-container)',
     marginTop: '16px',
     letterSpacing: '-0.24px',
   },
   summaryDivider: {
     height: '1px',
-    backgroundColor: 'var(--color-separator)',
+    backgroundColor: 'var(--md-sys-color-on-primary-container)',
     margin: '20px 0 14px',
   },
   quickLabel: {
     fontSize: 'var(--font-size-caption1)',
     fontWeight: 'var(--font-weight-medium)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-primary-container)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.35px',
     marginBottom: '10px',
@@ -239,19 +262,24 @@ const styles: Record<string, CSSProperties> = {
     gap: '8px',
     padding: 0,
   },
+  // Pen treatment: translucent on-primary pills over the primary-container
+  // summary card, with on-primary-container labels and no outline.
   pauseButton: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '5px',
-    minHeight: '44px',
-    padding: '8px 4px',
-    fontSize: 'var(--font-size-footnote)',
+    gap: '6px',
+    width: '100%',
+    minHeight: '40px',
+    padding: '0 12px',
+    fontSize: 'var(--font-size-subhead)',
     fontWeight: 'var(--font-weight-medium)',
-    color: 'var(--color-text-primary)',
-    backgroundColor: 'var(--color-bg-tertiary)',
+    color: 'var(--md-sys-color-on-primary-container)',
+    backgroundColor: 'var(--pause-button-bg, color-mix(in srgb, var(--md-sys-color-on-primary) 50%, transparent))',
+    border: 'none',
     borderRadius: 'var(--radius-full)',
     letterSpacing: '-0.08px',
+    cursor: 'pointer',
   },
   secondaryAction: {
     minHeight: '44px',
@@ -266,7 +294,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '40px',
     padding: '0 12px',
     margin: '4px 0',
-    color: 'var(--color-accent)',
+    color: 'var(--md-sys-color-on-primary-container)',
     backgroundColor: 'var(--color-accent-subtle)',
     borderRadius: 'var(--radius-sm)',
     fontSize: 'var(--font-size-subhead)',
@@ -279,45 +307,16 @@ const styles: Record<string, CSSProperties> = {
   },
   testStatus: {
     fontSize: 'var(--font-size-footnote)',
-    color: 'var(--color-text-tertiary)',
+    color: 'var(--md-sys-color-on-surface-variant)',
     letterSpacing: '-0.08px',
     minWidth: 0,
   },
 };
 
 const DropletMark = () => (
-  <svg aria-hidden="true" style={styles.droplet} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 3 C12 3 5 11 5 16 C5 20 8 22 12 22 C16 22 19 20 19 16 C19 11 12 3 12 3 Z" />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg aria-hidden="true" style={styles.sectionHeaderIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const CalendarIcon = () => (
-  <svg aria-hidden="true" style={styles.sectionHeaderIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="17" rx="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-
-const BellIcon = () => (
-  <svg aria-hidden="true" style={styles.sectionHeaderIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
+  <span aria-hidden="true" style={styles.logoMark}>
+    <md-icon style={styles.logoIcon}>water_drop</md-icon>
+  </span>
 );
 
 export function SettingsScreen({
@@ -332,8 +331,11 @@ export function SettingsScreen({
   onPauseForRestOfDay,
   onResume,
   themeState,
+  darkMode,
+  localeState,
 }: SettingsScreenProps) {
   const [testState, setTestState] = useState<'idle' | 'sending'>('idle');
+  const { t } = localeState;
 
   const formatNextTime = (date: Date | null) => {
     if (!date) return null;
@@ -341,54 +343,47 @@ export function SettingsScreen({
     const diffMs = date.getTime() - now.getTime();
     const diffMins = Math.round(diffMs / 60000);
 
-    if (diffMins < 1) return 'En cualquier momento';
-    if (diffMins < 60) return `Dentro de ${diffMins} min`;
+    if (diffMins < 1) return t.anyTime;
+    if (diffMins < 60) return t.inMinutes(diffMins);
     const hours = Math.floor(diffMins / 60);
     const minutes = diffMins % 60;
-    if (minutes === 0) return `Dentro de ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-    if (hours === 0) return `Dentro de ${minutes} min`;
-    return `Dentro de ${hours} h ${minutes} min`;
+    if (minutes === 0) return t.inHours(hours);
+    if (hours === 0) return t.inMinutes(minutes);
+    return t.inHoursMinutes(hours, minutes);
   };
 
-  const formatClock = (d: Date) => {
-    const h = d.getHours().toString().padStart(2, '0');
-    const m = d.getMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
-  };
+  // Clock rendering goes through Intl so en-US gets "8:05 AM" and es-ES "08:05".
+  const formatClock = (d: Date) => formatTime(d, t.localeTag);
 
   const summary = useMemo(() => {
     if (!settings.enabled) {
-      return {
-        eyebrow: 'Estado',
-        hero: 'Desactivados',
-        sub: 'No recibirás recordatorios.',
-      };
+      return { eyebrow: t.statusEyebrow, hero: t.remindersOff, sub: t.remindersOffSub };
     }
     if (permission === 'denied') {
       return {
-        eyebrow: 'Notificaciones',
-        hero: 'Bloqueadas',
-        sub: 'Cámbialo en los ajustes del navegador.',
+        eyebrow: t.notificationsEyebrow,
+        hero: t.notificationsBlocked,
+        sub: t.notificationsBlockedSub,
       };
     }
     if (permission === 'default') {
       return {
-        eyebrow: 'Notificaciones',
-        hero: 'Sin permiso',
-        sub: 'Actívalas para empezar a recibir avisos.',
+        eyebrow: t.notificationsEyebrow,
+        hero: t.permissionMissing,
+        sub: t.permissionMissingSub,
       };
     }
     if (isPaused) {
       const pausedUntil = settings.pausedUntil ? new Date(settings.pausedUntil) : null;
       const pausedForToday = pausedUntil?.getHours() === 23 && pausedUntil.getMinutes() === 59;
       return {
-        eyebrow: 'Estado',
-        hero: 'En pausa',
+        eyebrow: t.statusEyebrow,
+        hero: t.paused,
         sub: pausedForToday
-          ? 'Los recordatorios volverán mañana.'
+          ? t.pausedUntilTomorrow
           : pausedUntil
-            ? `En pausa hasta las ${formatClock(pausedUntil)}.`
-            : 'Reanuda cuando quieras.',
+            ? t.pausedUntil(formatClock(pausedUntil))
+            : t.resumeWhenever,
       };
     }
 
@@ -396,27 +391,24 @@ export function SettingsScreen({
 
     if (remaining.count === 0) {
       return {
-        eyebrow: 'Descanso',
-        hero: `Mañana desde las ${settings.activeHoursStart}`,
-        sub: 'Nada más por hoy.',
+        eyebrow: t.restEyebrow,
+        hero: t.tomorrowFrom(formatClockString(settings.activeHoursStart, t.localeTag)),
+        sub: t.nothingMoreToday,
       };
     }
 
-    const relativeTime = formatNextTime(nextNotificationTime) ?? 'Pronto';
-    let sub: string;
-    if (remaining.count === 1) {
-      sub = `${relativeTime} · Último recordatorio del día`;
-    } else {
-      const moreCount = remaining.count - 1;
-      sub = `${relativeTime} · ${moreCount} ${moreCount === 1 ? 'recordatorio' : 'recordatorios'} más hoy`;
-    }
+    const relativeTime = formatNextTime(nextNotificationTime) ?? t.soon;
+    const sub =
+      remaining.count === 1
+        ? t.lastReminderOfDay(relativeTime)
+        : t.moreToday(relativeTime, remaining.count - 1);
 
     return {
-      eyebrow: 'Próximo aviso',
-      hero: nextNotificationTime ? formatClock(nextNotificationTime) : 'Pronto',
+      eyebrow: t.nextEyebrow,
+      hero: nextNotificationTime ? formatClock(nextNotificationTime) : t.soon,
       sub,
     };
-  }, [settings, permission, isPaused, nextNotificationTime]);
+  }, [settings, permission, isPaused, nextNotificationTime, t]);
 
   const handleStart = () => {
     onUpdateSettings({ enabled: true });
@@ -448,40 +440,71 @@ export function SettingsScreen({
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div style={styles.headerInner}>
-          <div style={styles.headerLeft}>
+        <div className="app-header-inner" style={styles.headerInner}>
+          <div className="app-header-left" style={styles.headerLeft}>
             <DropletMark />
-            <h1 style={styles.title}>Hidratación</h1>
+            <h1 style={styles.title}>{t.appTitle}</h1>
           </div>
-          <div style={styles.headerRight}>
-            <ThemePicker {...themeState} />
+          <div className="app-header-actions" style={styles.headerRight}>
+            <LanguagePicker
+              locale={localeState.locale}
+              locales={localeState.locales}
+              onChange={localeState.setLocale}
+              t={t}
+            />
+            <button
+              type="button"
+              onClick={darkMode.toggle}
+              aria-label={darkMode.scheme === 'dark' ? t.switchToLight : t.switchToDark}
+              aria-pressed={darkMode.scheme === 'dark'}
+              title={darkMode.scheme === 'dark' ? t.lightMode : t.darkMode}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 'var(--md-sys-shape-corner-full)',
+                border: '1px solid var(--md-sys-color-outline-variant)',
+                backgroundColor: 'var(--md-sys-color-surface-container-low)',
+                color: 'var(--md-sys-color-on-surface)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <md-icon aria-hidden="true">
+                {darkMode.scheme === 'dark' ? 'light_mode' : 'dark_mode'}
+              </md-icon>
+            </button>
+            <ThemePicker {...themeState} t={t} />
           </div>
         </div>
       </header>
 
       <main className="app-main">
         {/* LEFT — status + primary action */}
-        <aside className="app-left" aria-label="Estado y acciones rápidas">
+        <aside className="app-left" aria-label={t.quickActionsLabel}>
           <div style={styles.summaryCard}>
             <div style={styles.statusRow}>
               <div>
                 <label htmlFor="reminders-switch" id="reminders-label" style={styles.statusLabel}>
-                  Recordatorios
+                  {t.reminders}
                 </label>
                 <span id="reminders-hint" style={styles.statusHint}>
                   {!settings.enabled
-                    ? 'Desactivados'
+                    ? t.statusOff
                     : permission !== 'granted'
-                      ? 'Necesitan permiso'
+                      ? t.statusNeedsPermission
                       : isPaused
-                        ? 'En pausa'
-                        : 'Activos'}
+                        ? t.statusPaused
+                        : t.statusActive}
                 </span>
               </div>
               <ToggleSwitch
                 id="reminders-switch"
                 checked={settings.enabled}
                 onChange={handleEnabledChange}
+                ariaLabel={t.reminders}
                 ariaLabelledBy="reminders-label"
                 ariaDescribedBy="reminders-hint"
               />
@@ -495,44 +518,49 @@ export function SettingsScreen({
               <>
                 <div style={styles.summaryDivider} />
                 {isPaused ? (
-                  <button className="secondary-action" style={styles.secondaryAction} onClick={onResume}>
-                    Reanudar recordatorios
-                  </button>
+                  <md-filled-tonal-button onClick={onResume} style={{ width: '100%' }}>
+                    {t.resumeReminders}
+                  </md-filled-tonal-button>
                 ) : (
                   <>
-                    <p id="pause-label" style={styles.quickLabel}>Pausar temporalmente</p>
+                    <p id="pause-label" style={styles.quickLabel}>{t.pauseTemporarily}</p>
                     <div style={styles.pauseGrid} role="group" aria-labelledby="pause-label">
                       <button
-                        className="pause-chip"
-                        style={styles.pauseButton}
+                        type="button"
+                        className="pause-button"
                         onClick={() => onPauseFor(30)}
-                        aria-label="Pausar 30 minutos"
+                        aria-label={t.pauseMinutesLabel(30)}
+                        style={styles.pauseButton}
                       >
-                        30 min
+                        {t.pauseMinutes(30)}
                       </button>
                       <button
-                        className="pause-chip"
-                        style={styles.pauseButton}
+                        type="button"
+                        className="pause-button"
                         onClick={() => onPauseFor(60)}
-                        aria-label="Pausar 1 hora"
+                        aria-label={t.pauseHoursLabel(1)}
+                        style={styles.pauseButton}
                       >
-                        1 hora
+                        {t.pauseHours(1)}
                       </button>
                       <button
-                        className="pause-chip"
-                        style={styles.pauseButton}
+                        type="button"
+                        className="pause-button"
                         onClick={() => onPauseFor(120)}
-                        aria-label="Pausar 2 horas"
+                        aria-label={t.pauseHoursLabel(2)}
+                        style={styles.pauseButton}
                       >
-                        2 horas
+                        {t.pauseHours(2)}
                       </button>
                       <button
-                        className="pause-chip"
-                        style={styles.pauseButton}
+                        type="button"
+                        className="pause-button"
                         onClick={onPauseForRestOfDay}
-                        aria-label="Pausar hasta mañana"
+                        aria-label={t.untilTomorrowLabel}
+                        style={styles.pauseButton}
                       >
-                        <MoonIcon /> Hasta mañana
+                        <md-icon style={{ fontSize: '18px' }}>bedtime</md-icon>
+                        {t.untilTomorrow}
                       </button>
                     </div>
                   </>
@@ -541,31 +569,45 @@ export function SettingsScreen({
             )}
           </div>
 
+          <a
+            className="github-link"
+            href="https://github.com/sydvibecoding/hydration-reminder"
+            target="_blank"
+            rel="noreferrer"
+            aria-label={t.githubLinkLabel}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.49 0-.24-.01-1.05-.02-1.9-2.78.62-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .08 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05A9.38 9.38 0 0 1 12 6.09a9.4 9.4 0 0 1 2.5.34c1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.64 1.03 2.76 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z" />
+            </svg>
+            <span>{t.githubLink}</span>
+            <md-icon aria-hidden="true">open_in_new</md-icon>
+          </a>
+
           {settings.enabled && permission === 'default' && (
             <div style={styles.ctaWrapper}>
-              <button className="primary-cta" style={styles.primaryCta} onClick={onRequestPermission}>
-                Activar notificaciones
-              </button>
+              <md-filled-button onClick={onRequestPermission} style={{ width: '100%' }}>
+                {t.enableNotifications}
+              </md-filled-button>
             </div>
           )}
           {settings.enabled && permission === 'denied' && (
             <div style={styles.notice} role="alert">
-              Las notificaciones están bloqueadas en este navegador. Actívalas desde los
-              ajustes del sitio para recibir recordatorios.
+              {t.blockedAlert}
             </div>
           )}
         </aside>
 
         {/* RIGHT — visible config */}
-        <section className="app-right" aria-label="Ajustes">
+        <section className="app-right" aria-label={t.settingsLabel}>
           {/* Frecuencia */}
           <div style={{ ...styles.section, ...styles.sectionFirst }}>
-            <h2 style={styles.sectionHeader}><ClockIcon />Frecuencia</h2>
+            <h2 style={styles.sectionTitle}>{t.frequency}</h2>
             <div style={styles.card}>
               <div style={styles.intervalContainer}>
                 <IntervalSelector
                   value={settings.intervalMinutes}
                   onChange={(intervalMinutes) => onUpdateSettings({ intervalMinutes })}
+                  t={t}
                 />
               </div>
             </div>
@@ -573,22 +615,30 @@ export function SettingsScreen({
 
           {/* Horario (weekday + weekend merged) */}
           <div style={styles.section}>
-            <h2 style={styles.sectionHeader}><CalendarIcon />Horario</h2>
+            <h2 style={styles.sectionTitle}>{t.schedule}</h2>
             <div style={styles.card}>
               <div style={styles.row}>
-                <span style={styles.rowLabel}>Desde</span>
+                <span style={styles.rowLeading}>
+                  <md-icon aria-hidden="true" style={styles.rowIcon}>schedule</md-icon>
+                  <span style={styles.rowLabel}>{t.from}</span>
+                </span>
                 <TimePicker
                   value={settings.activeHoursStart}
                   onChange={(v) => onUpdateSettings({ activeHoursStart: v })}
-                  ariaLabel="Hora de inicio de los recordatorios"
+                  ariaLabel={t.startTimeLabel}
+                  t={t}
                 />
               </div>
               <div style={styles.row}>
-                <span style={styles.rowLabel}>Hasta</span>
+                <span style={styles.rowLeading}>
+                  <md-icon aria-hidden="true" style={styles.rowIcon}>schedule</md-icon>
+                  <span style={styles.rowLabel}>{t.to}</span>
+                </span>
                 <TimePicker
                   value={settings.activeHoursEnd}
                   onChange={(v) => onUpdateSettings({ activeHoursEnd: v })}
-                  ariaLabel="Hora de finalización de los recordatorios"
+                  ariaLabel={t.endTimeLabel}
+                  t={t}
                 />
               </div>
               <div
@@ -597,8 +647,9 @@ export function SettingsScreen({
                   ...(settings.weekendHoursEnabled ? {} : styles.rowLast),
                 }}
               >
-                <label htmlFor="weekend-switch" id="weekend-label" style={styles.rowLabel}>
-                  Horario de fin de semana
+                <label htmlFor="weekend-switch" id="weekend-label" style={{ ...styles.rowLabel, ...styles.rowLeading }}>
+                  <md-icon aria-hidden="true" style={styles.rowIcon}>calendar_today</md-icon>
+                  <span>{t.weekendSchedule}</span>
                 </label>
                 <ToggleSwitch
                   id="weekend-switch"
@@ -606,51 +657,67 @@ export function SettingsScreen({
                   onChange={(weekendHoursEnabled) =>
                     onUpdateSettings({ weekendHoursEnabled })
                   }
+                  ariaLabel={t.weekendSchedule}
                   ariaLabelledBy="weekend-label"
                 />
               </div>
               {settings.weekendHoursEnabled && (
                 <>
-                  <div style={styles.subGroupHeader}>Fin de semana</div>
+                  <div style={styles.subGroupHeader}>{t.weekend}</div>
                   <div style={{ ...styles.row, ...styles.rowIndented }}>
-                    <span style={styles.rowLabel}>Desde</span>
+                    <span style={styles.rowLeading}>
+                      <md-icon aria-hidden="true" style={styles.rowIcon}>schedule</md-icon>
+                      <span style={styles.rowLabel}>{t.from}</span>
+                    </span>
                     <TimePicker
                       value={settings.weekendStart}
                       onChange={(v) => onUpdateSettings({ weekendStart: v })}
-                      ariaLabel="Hora de inicio durante el fin de semana"
+                      ariaLabel={t.weekendStartLabel}
+                      t={t}
                     />
                   </div>
                   <div style={{ ...styles.row, ...styles.rowIndented, ...styles.rowLast }}>
-                    <span style={styles.rowLabel}>Hasta</span>
+                    <span style={styles.rowLeading}>
+                      <md-icon aria-hidden="true" style={styles.rowIcon}>schedule</md-icon>
+                      <span style={styles.rowLabel}>{t.to}</span>
+                    </span>
                     <TimePicker
                       value={settings.weekendEnd}
                       onChange={(v) => onUpdateSettings({ weekendEnd: v })}
-                      ariaLabel="Hora de finalización durante el fin de semana"
+                      ariaLabel={t.weekendEndLabel}
+                      t={t}
                     />
                   </div>
                 </>
               )}
             </div>
             <p style={styles.sectionFooter}>
-              Solo recibirás recordatorios durante estas horas.
+              {t.scheduleFooter}
             </p>
           </div>
 
           {/* Alertas */}
           <div style={styles.section}>
-            <h2 style={styles.sectionHeader}><BellIcon />Alertas</h2>
+            <h2 style={styles.sectionTitle}>{t.alerts}</h2>
             <div style={styles.card}>
               <div style={styles.row}>
-                <label htmlFor="sound-switch" id="sound-label" style={styles.rowLabel}>Sonido</label>
+                <label htmlFor="sound-switch" id="sound-label" style={{ ...styles.rowLabel, ...styles.rowLeading }}>
+                  <md-icon aria-hidden="true" style={styles.rowIcon}>volume_up</md-icon>
+                  <span>{t.sound}</span>
+                </label>
                 <ToggleSwitch
                   id="sound-switch"
                   checked={settings.soundEnabled}
                   onChange={(soundEnabled) => onUpdateSettings({ soundEnabled })}
+                  ariaLabel={t.sound}
                   ariaLabelledBy="sound-label"
                 />
               </div>
               <div style={{ ...styles.row, ...styles.rowLast }}>
-                <span style={styles.rowLabel}>Notificación de prueba</span>
+                <span style={styles.rowLeading}>
+                  <md-icon aria-hidden="true" style={styles.rowIcon}>notifications</md-icon>
+                  <span style={styles.rowLabel}>{t.testNotification}</span>
+                </span>
                 <div style={styles.testActionCluster}>
                   <span
                     style={styles.testStatus}
@@ -659,19 +726,19 @@ export function SettingsScreen({
                     aria-atomic="true"
                   >
                     {testResult === 'success'
-                      ? 'Enviada'
+                      ? t.sent
                       : testResult === 'failure'
-                        ? 'No se pudo enviar'
+                        ? t.sendFailed
                         : ''}
                   </span>
                   <button
-                    className="alert-test-action"
+                    type="button"
                     style={styles.rowAction}
                     onClick={handleTestNotification}
                     disabled={testState === 'sending'}
                     aria-busy={testState === 'sending'}
                   >
-                    {testState === 'sending' ? 'Enviando…' : 'Probar'}
+                    {testState === 'sending' ? t.sending : t.test}
                   </button>
                 </div>
               </div>
@@ -680,8 +747,25 @@ export function SettingsScreen({
         </section>
       </main>
 
+      <section className="about-app" aria-labelledby="about-app-title">
+        <div className="about-app-intro">
+          <p className="about-app-eyebrow">{t.aboutEyebrow}</p>
+          <h2 id="about-app-title">{t.aboutTitle}</h2>
+          <p>{t.aboutBody}</p>
+        </div>
+        <div className="about-app-grid">
+          {t.faq.map((item, index) => (
+            <article key={item.q}>
+              <md-icon aria-hidden="true">{FAQ_ICONS[index] ?? 'help'}</md-icon>
+              <h3>{item.q}</h3>
+              <p>{item.a}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <footer className="privacy-footer">
-        Tus ajustes se guardan solo en este navegador.
+        {t.footer}
       </footer>
     </div>
   );

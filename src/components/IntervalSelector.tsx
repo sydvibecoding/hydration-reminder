@@ -1,72 +1,60 @@
-import { CSSProperties } from 'react';
+import { useEffect, useRef } from 'react';
 import { IntervalMinutes, INTERVAL_OPTIONS } from '../types/settings';
+import type { Messages } from '../i18n';
 
 interface IntervalSelectorProps {
   value: IntervalMinutes;
   onChange: (value: IntervalMinutes) => void;
+  t: Messages;
 }
 
-const styles: Record<string, CSSProperties> = {
-  container: {
-    display: 'flex',
-    gap: '6px',
-    backgroundColor: 'transparent',
-    borderRadius: 'var(--radius-sm)',
-    padding: '2px 0',
-  },
-  option: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '8px 2px',
-    minHeight: '44px',
-    fontSize: 'var(--font-size-footnote)',
-    fontWeight: 'var(--font-weight-medium)',
-    textAlign: 'center' as const,
-    borderRadius: '8px',
-    backgroundColor: 'var(--color-bg-tertiary)',
-    color: 'var(--color-text-primary)',
-    cursor: 'pointer',
-    border: 'none',
-    letterSpacing: '-0.08px',
-  },
-  optionSelected: {
-    backgroundColor: 'var(--color-accent-subtle)',
-    color: 'var(--color-accent)',
-    boxShadow: 'inset 0 0 0 1px var(--color-accent)',
-    fontWeight: 'var(--font-weight-semibold)',
-  },
-};
-
-function formatInterval(minutes: IntervalMinutes): string {
-  if (minutes < 60) {
-    return `${minutes} min`;
-  }
-  const hours = minutes / 60;
-  if (Number.isInteger(hours)) {
-    return hours === 1 ? '1 h' : `${hours} h`;
-  }
-  return '1 h 30 min';
+function formatInterval(minutes: IntervalMinutes, t: Messages): string {
+  if (minutes < 60) return t.intervalMinutes(minutes);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) return t.intervalHours(hours);
+  return t.intervalHoursMinutes(hours, rest);
 }
 
-export function IntervalSelector({ value, onChange }: IntervalSelectorProps) {
+/**
+ * M3 segmented button set. Single-select — mirrors radio semantics via
+ * `role="radiogroup"` on the set. The Lit component fires `segmented-button-set-selection`
+ * on any change; we read the `selected` property of each child to derive the
+ * new value.
+ */
+export function IntervalSelector({ value, onChange, t }: IntervalSelectorProps) {
+  const setRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const set = setRef.current;
+    if (!set) return;
+    const handle = () => {
+      const buttons = Array.from(set.querySelectorAll('md-outlined-segmented-button')) as (HTMLElement & { selected?: boolean })[];
+      const idx = buttons.findIndex((b) => b.selected);
+      if (idx >= 0) {
+        const picked = INTERVAL_OPTIONS[idx];
+        if (picked !== value) onChange(picked);
+      }
+    };
+    set.addEventListener('segmented-button-set-selection', handle);
+    return () => set.removeEventListener('segmented-button-set-selection', handle);
+  }, [value, onChange]);
+
   return (
-    <div style={styles.container} role="group" aria-label="Frecuencia de los recordatorios">
+    <md-outlined-segmented-button-set
+      ref={setRef}
+      role="radiogroup"
+      aria-label={t.frequencyLabel}
+      style={{ width: '100%' }}
+    >
       {INTERVAL_OPTIONS.map((option) => (
-        <button
+        <md-outlined-segmented-button
           key={option}
-          className={`interval-option${value === option ? ' is-selected' : ''}`}
-          onClick={() => onChange(option)}
-          aria-pressed={value === option}
-          style={{
-            ...styles.option,
-            ...(value === option ? styles.optionSelected : {}),
-          }}
-        >
-          {formatInterval(option)}
-        </button>
+          label={formatInterval(option, t)}
+          selected={value === option || undefined}
+          style={{ flex: 1 }}
+        />
       ))}
-    </div>
+    </md-outlined-segmented-button-set>
   );
 }
