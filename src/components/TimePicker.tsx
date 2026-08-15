@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, CSSProperties } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { formatClockString, parseClock, toClockString, usesTwelveHourClock } from '../i18n';
 import type { Messages } from '../i18n';
 
@@ -10,16 +11,17 @@ interface Props {
   t: Messages;
 }
 
-// Material 3 time picker, input (keyboard) variant.
+// Time picker: every hour and minute exposed as a grid, no typing, no modal.
 //
-// M3 specifies two time pickers: dial and input. @material/web ships neither,
-// so this composes the input variant from the components it does ship —
-// md-dialog for the container, focus trap and scrim, md-outlined-text-field for
-// the hour and minute entries, md-outlined-segmented-button-set for AM/PM.
+// M3 specifies dial and input variants, both modal dialogs. Neither is used
+// here — picking from a visible grid takes one tap, where the spec variants
+// take a dialog plus a confirm. What is borrowed from M3 is the styling: cells
+// are list-item shaped with a state layer, the selected cell uses the
+// primary-container role pair, and the surface is surface-container-high at
+// extra-large corner radius.
 //
-// The fields are uncontrolled: values are seeded imperatively when the dialog
-// opens and read back on confirm. React state per keystroke would fight the
-// web components' own value property.
+// On 12-hour locales the grid shows 1-12 with an AM/PM toggle; on 24-hour
+// locales it shows 00-23. Stored values stay 24-hour either way.
 
 const styles: Record<string, CSSProperties> = {
   container: { position: 'relative', display: 'inline-block' },
@@ -38,173 +40,280 @@ const styles: Record<string, CSSProperties> = {
     minWidth: '84px',
     textAlign: 'center',
   },
-  fieldRow: {
+  // Rendered through a portal on document.body with position: fixed. Inside the
+  // settings card an ancestor contains it, so the dropdown grew the card and
+  // produced a scrollbar instead of floating above it.
+  popover: {
+    position: 'fixed',
+    padding: '16px',
+    backgroundColor: 'var(--md-sys-color-surface-container-high)',
+    borderRadius: 'var(--md-sys-shape-corner-extra-large)',
+    boxShadow: '0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.30)',
     display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
     gap: '12px',
-    paddingTop: '8px',
+    zIndex: 1000,
   },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  fieldCaption: {
-    fontSize: 'var(--font-size-caption1)',
+  column: { display: 'flex', flexDirection: 'column' },
+  columnLabel: {
+    fontSize: 'var(--font-size-footnote)',
+    fontWeight: 'var(--font-weight-medium)',
     color: 'var(--md-sys-color-on-surface-variant)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.8px',
+    marginBottom: '8px',
     paddingLeft: '2px',
   },
-  separator: {
-    fontSize: '38px',
-    lineHeight: '68px',
-    color: 'var(--md-sys-color-on-surface)',
-    fontVariantNumeric: 'tabular-nums',
+  // 6 columns keeps 24 hours to 4 rows. At 4 columns it needed 6 rows, which
+  // made the dropdown taller than the settings card it opens inside.
+  hourGrid: { display: 'grid', gridTemplateColumns: 'repeat(6, 40px)', gap: '4px' },
+  hourGrid12: { display: 'grid', gridTemplateColumns: 'repeat(6, 40px)', gap: '4px' },
+  minuteGrid: { display: 'grid', gridTemplateColumns: '44px', gap: '4px' },
+  divider: {
+    width: '1px',
+    backgroundColor: 'var(--md-sys-color-outline-variant)',
+    margin: '24px 0 4px',
   },
-  periodSet: { display: 'flex', flexDirection: 'column', paddingTop: '4px' },
+  periodColumn: { display: 'flex', flexDirection: 'column', gap: '4px' },
 };
 
-// M3 input variant: 96x72 fields showing display-medium numerals.
-const FIELD_STYLE: CSSProperties = {
-  width: '96px',
-  ['--md-outlined-text-field-container-shape' as string]: '8px',
-  ['--md-outlined-text-field-input-text-size' as string]: '38px',
-  ['--md-outlined-text-field-input-text-line-height' as string]: '44px',
+// M3 list-item idiom at cell scale: full corner, label-large, state layer and
+// selected colours supplied by the .time-cell rules in index.css.
+const CELL: CSSProperties = {
+  minHeight: '36px',
+  padding: '4px 6px',
+  fontSize: 'var(--font-size-subhead)',
+  fontWeight: 'var(--font-weight-medium)',
+  color: 'var(--md-sys-color-on-surface)',
+  backgroundColor: 'transparent',
+  border: 'none',
+  borderRadius: 'var(--md-sys-shape-corner-full)',
+  cursor: 'pointer',
+  textAlign: 'center',
+  fontVariantNumeric: 'tabular-nums',
+  letterSpacing: '0.1px',
+  fontFamily: 'inherit',
 };
 
-function clamp(value: number, min: number, max: number): number {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
+const CELL_ACTIVE: CSSProperties = {
+  backgroundColor: 'var(--selected-option-bg)',
+  color: 'var(--selected-option-fg)',
+  fontWeight: 'var(--font-weight-semibold)',
+};
 
-export function TimePicker({ value, onChange, minuteStep = 1, ariaLabel, t }: Props) {
+export function TimePicker({ value, onChange, minuteStep = 15, ariaLabel, t }: Props) {
   const [open, setOpen] = useState(false);
-  const [isPm, setIsPm] = useState(false);
-
-  const dialogRef = useRef<HTMLElement>(null);
-  const hourRef = useRef<HTMLElement>(null);
-  const minuteRef = useRef<HTMLElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const selectedHourRef = useRef<HTMLButtonElement>(null);
+  const popoverId = useId();
 
   const twelveHour = usesTwelveHourClock(t.localeTag);
   const display = formatClockString(value, t.localeTag);
 
-  // Seed the fields from the stored value each time the dialog opens, so a
-  // cancelled edit leaves no residue behind.
-  useEffect(() => {
-    if (!open) return;
-    const { hour, minute } = parseClock(value);
-    const shownHour = twelveHour ? hour % 12 || 12 : hour;
-    setIsPm(hour >= 12);
-    const frame = requestAnimationFrame(() => {
-      const h = hourRef.current as (HTMLElement & { value: string }) | null;
-      const m = minuteRef.current as (HTMLElement & { value: string }) | null;
-      if (h) h.value = twelveHour ? String(shownHour) : String(shownHour).padStart(2, '0');
-      if (m) m.value = String(minute).padStart(2, '0');
-      (h as HTMLElement | null)?.focus();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [open, value, twelveHour]);
+  const { hour, minute } = parseClock(value);
 
-  // md-dialog owns its own open state and animations; drive it imperatively and
-  // mirror its `closed` event back into React so Escape and scrim clicks agree.
-  useEffect(() => {
-    const dialog = dialogRef.current as
-      | (HTMLElement & { open: boolean })
-      | null;
-    if (!dialog) return;
-    dialog.open = open;
-    const onClosed = () => {
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    dialog.addEventListener('closed', onClosed);
-    return () => dialog.removeEventListener('closed', onClosed);
-  }, [open]);
+  const minutes = Array.from({ length: Math.floor(60 / minuteStep) }, (_, i) => i * minuteStep);
+  // Snap to the nearest offered minute so the grid always shows one cell as
+  // selected, even if the stored value came from a different step.
+  const snappedMinute = minutes.includes(minute)
+    ? minute
+    : minutes.reduce((closest, current) =>
+        Math.abs(current - minute) < Math.abs(closest - minute) ? current : closest,
+      minutes[0]);
 
-  const confirm = () => {
-    const h = hourRef.current as (HTMLElement & { value: string }) | null;
-    const m = minuteRef.current as (HTMLElement & { value: string }) | null;
-    let hour = clamp(Number(h?.value), twelveHour ? 1 : 0, twelveHour ? 12 : 23);
-    let minute = clamp(Number(m?.value), 0, 59);
+  const isPm = hour >= 12;
+  const hours = twelveHour
+    ? Array.from({ length: 12 }, (_, i) => i + 1)      // 1..12
+    : Array.from({ length: 24 }, (_, i) => i);          // 0..23
+  const shownHour = twelveHour ? hour % 12 || 12 : hour;
 
-    if (minuteStep > 1) {
-      minute = Math.min(59, Math.round(minute / minuteStep) * minuteStep);
-    }
-    if (twelveHour) {
-      hour = hour % 12 + (isPm ? 12 : 0);
-    }
-    onChange(toClockString(hour, minute));
+  const close = () => {
     setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
+  // Compose a 24-hour stored value from whichever grid is on screen.
+  const commit = (nextHour: number, nextMinute: number, nextIsPm: boolean) => {
+    const hour24 = twelveHour ? (nextHour % 12) + (nextIsPm ? 12 : 0) : nextHour;
+    onChange(toClockString(hour24, nextMinute));
+  };
+
+  // A fixed-position portal does not follow its trigger, so recompute on open,
+  // scroll and resize. Right-aligned to the trigger, flipped above when there
+  // is not enough room below, and clamped to the viewport.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      const el = popoverRef.current;
+      if (!trigger || !el) return;
+      const { offsetWidth: w, offsetHeight: h } = el;
+      const below = trigger.bottom + 8;
+      const above = trigger.top - h - 8;
+      const top = below + h <= window.innerHeight - 8 || above < 8 ? below : above;
+      const left = Math.min(
+        Math.max(8, trigger.right - w),
+        window.innerWidth - w - 8
+      );
+      setPos({ top, left });
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    // Land focus on the selected hour rather than stranding it on the trigger
+    // outside the dialog (WAI-ARIA APG dialog pattern).
+    const focusFrame = requestAnimationFrame(() => selectedHourRef.current?.focus());
+    const onClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      // The popover is portalled out of containerRef, so both subtrees count
+      // as "inside".
+      if (containerRef.current?.contains(target) || popoverRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        close();
+        return;
+      }
+      if (event.key === 'Tab' && popoverRef.current) {
+        const buttons = [...popoverRef.current.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
   return (
-    <div style={styles.container}>
+    <div ref={containerRef} style={styles.container}>
       <button
         ref={triggerRef}
         className="time-trigger"
         style={styles.trigger}
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((v) => !v)}
         aria-label={`${ariaLabel}: ${display}`}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls={open ? popoverId : undefined}
       >
         {display}
       </button>
 
-      <md-dialog ref={dialogRef} aria-label={ariaLabel}>
-        <div slot="headline">{t.timePickerHeadline}</div>
-        <form slot="content" method="dialog" onSubmit={(e) => e.preventDefault()}>
-          <div style={styles.fieldRow}>
-            <div style={styles.fieldGroup}>
-              <md-outlined-text-field
-                ref={hourRef}
-                style={FIELD_STYLE}
-                type="number"
-                inputmode="numeric"
-                min={twelveHour ? '1' : '0'}
-                max={twelveHour ? '12' : '23'}
-                aria-label={t.hour}
-                no-spinner
-              />
-              <span style={styles.fieldCaption}>{t.hour}</span>
+      {open && createPortal(
+        <div
+          ref={popoverRef}
+          id={popoverId}
+          className="time-picker-popover"
+          style={{
+            ...styles.popover,
+            top: pos?.top ?? -9999,
+            left: pos?.left ?? -9999,
+            visibility: pos ? 'visible' : 'hidden',
+          }}
+          role="dialog"
+          aria-label={ariaLabel}
+        >
+          <div style={styles.column}>
+            <div style={styles.columnLabel}>{t.hourAbbr}</div>
+            <div
+              style={twelveHour ? styles.hourGrid12 : styles.hourGrid}
+              role="group"
+              aria-label={t.hour}
+            >
+              {hours.map((h) => {
+                const active = h === shownHour;
+                return (
+                  <button
+                    key={h}
+                    ref={active ? selectedHourRef : undefined}
+                    className="time-cell"
+                    style={{ ...CELL, ...(active ? CELL_ACTIVE : {}) }}
+                    onClick={() => commit(h, snappedMinute, isPm)}
+                    aria-pressed={active}
+                  >
+                    {twelveHour ? h : pad(h)}
+                  </button>
+                );
+              })}
             </div>
-
-            <span aria-hidden="true" style={styles.separator}>:</span>
-
-            <div style={styles.fieldGroup}>
-              <md-outlined-text-field
-                ref={minuteRef}
-                style={FIELD_STYLE}
-                type="number"
-                inputmode="numeric"
-                min="0"
-                max="59"
-                aria-label={t.minute}
-                no-spinner
-              />
-              <span style={styles.fieldCaption}>{t.minute}</span>
-            </div>
-
-            {twelveHour && (
-              <div style={styles.periodSet}>
-                <md-outlined-segmented-button-set aria-label={`${t.am} / ${t.pm}`}>
-                  <md-outlined-segmented-button
-                    label={t.am}
-                    selected={!isPm}
-                    onClick={() => setIsPm(false)}
-                  />
-                  <md-outlined-segmented-button
-                    label={t.pm}
-                    selected={isPm}
-                    onClick={() => setIsPm(true)}
-                  />
-                </md-outlined-segmented-button-set>
-              </div>
-            )}
           </div>
-        </form>
-        <div slot="actions">
-          <md-text-button onClick={() => setOpen(false)}>{t.cancel}</md-text-button>
-          <md-text-button onClick={confirm}>{t.ok}</md-text-button>
-        </div>
-      </md-dialog>
+
+          <div aria-hidden="true" style={styles.divider} />
+
+          <div style={styles.column}>
+            <div style={styles.columnLabel}>{t.minuteAbbr}</div>
+            <div style={styles.minuteGrid} role="group" aria-label={t.minute}>
+              {minutes.map((m) => {
+                const active = m === snappedMinute;
+                return (
+                  <button
+                    key={m}
+                    className="time-cell"
+                    style={{ ...CELL, ...(active ? CELL_ACTIVE : {}) }}
+                    onClick={() => {
+                      commit(shownHour, m, isPm);
+                      close();
+                    }}
+                    aria-pressed={active}
+                  >
+                    {pad(m)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {twelveHour && (
+            <>
+              <div aria-hidden="true" style={styles.divider} />
+              <div style={styles.column}>
+                <div style={styles.columnLabel}>{`${t.am}/${t.pm}`}</div>
+                <div style={styles.periodColumn} role="group" aria-label={`${t.am} / ${t.pm}`}>
+                  {[false, true].map((pm) => (
+                    <button
+                      key={String(pm)}
+                      className="time-cell"
+                      style={{ ...CELL, minWidth: '48px', ...(isPm === pm ? CELL_ACTIVE : {}) }}
+                      onClick={() => commit(shownHour, snappedMinute, pm)}
+                      aria-pressed={isPm === pm}
+                    >
+                      {pm ? t.pm : t.am}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
