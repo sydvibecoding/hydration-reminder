@@ -142,6 +142,11 @@ export const en: Messages = {
   githubLink: 'View project on GitHub',
   githubLinkLabel: 'View the project on GitHub (opens in a new tab)',
 
+  desktopOnlyEyebrow: 'Desktop only',
+  desktopOnlyTitle: 'Best on a computer',
+  desktopOnlyBody:
+    'This app is built for desktop screens. Open it on a computer to set up your reminders.',
+
   aboutEyebrow: 'At your pace',
   aboutTitle: 'A water reminder that fits your day',
   aboutBody:

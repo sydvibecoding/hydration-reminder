@@ -673,3 +673,67 @@ md-outlined-segmented-button {
     padding: 0;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Desktop-only gate.
+ * The app targets desktop. On small viewports we hide the whole UI and
+ * show a short message instead. Mobile-first: gate shown, app hidden by
+ * default; the breakpoint flips both at 768px. Pure CSS, so there is no
+ * flash of the wrong screen before React measures anything.
+ * ------------------------------------------------------------------ */
+.desktop-gate {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+}
+
+.app-shell {
+  display: none;
+}
+
+.desktop-gate__card {
+  max-width: 340px;
+  text-align: center;
+}
+
+.desktop-gate__icon {
+  --md-icon-size: 48px;
+  font-size: 48px;
+  color: var(--md-sys-color-primary);
+}
+
+.desktop-gate__eyebrow {
+  margin: 16px 0 0;
+  font-size: var(--font-size-label, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.desktop-gate__title {
+  margin: 6px 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.desktop-gate__body {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (min-width: 768px) {
+  .desktop-gate {
+    display: none;
+  }
+  .app-shell {
+    display: block;
+  }
+}

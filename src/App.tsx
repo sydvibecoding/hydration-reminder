@@ -4,6 +4,7 @@ import { useTheme } from './hooks/useTheme';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLocale } from './hooks/useLocale';
 import { SettingsScreen } from './components/SettingsScreen';
+import { DesktopGate } from './components/DesktopGate';
 
 function App() {
   const {
@@ -27,21 +28,26 @@ function App() {
   const localeState = useLocale();
 
   return (
-    <SettingsScreen
-      settings={settings}
-      onUpdateSettings={updateSettings}
-      permission={permission}
-      onRequestPermission={requestPermission}
-      nextNotificationTime={nextNotificationTime}
-      onSendTestNotification={sendTestNotification}
-      isPaused={isPaused()}
-      onPauseFor={pauseFor}
-      onPauseForRestOfDay={pauseForRestOfDay}
-      onResume={resumeNotifications}
-      themeState={themeState}
-      darkMode={darkMode}
-      localeState={localeState}
-    />
+    <>
+      <DesktopGate t={localeState.t} />
+      <div className="app-shell">
+        <SettingsScreen
+          settings={settings}
+          onUpdateSettings={updateSettings}
+          permission={permission}
+          onRequestPermission={requestPermission}
+          nextNotificationTime={nextNotificationTime}
+          onSendTestNotification={sendTestNotification}
+          isPaused={isPaused()}
+          onPauseFor={pauseFor}
+          onPauseForRestOfDay={pauseForRestOfDay}
+          onResume={resumeNotifications}
+          themeState={themeState}
+          darkMode={darkMode}
+          localeState={localeState}
+        />
+      </div>
+    </>
   );
 }
 

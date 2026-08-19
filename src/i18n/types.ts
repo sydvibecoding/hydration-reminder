@@ -148,6 +148,11 @@ export interface Messages {
   githubLink: string;
   githubLinkLabel: string;
 
+  // Desktop-only gate (small viewports)
+  desktopOnlyEyebrow: string;
+  desktopOnlyTitle: string;
+  desktopOnlyBody: string;
+
   // About
   aboutEyebrow: string;
   aboutTitle: string;

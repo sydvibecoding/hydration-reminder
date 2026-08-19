@@ -142,6 +142,11 @@ export const es: Messages = {
   githubLink: 'Ver proyecto en GitHub',
   githubLinkLabel: 'Ver el proyecto en GitHub (se abre en una pestaña nueva)',
 
+  desktopOnlyEyebrow: 'Solo escritorio',
+  desktopOnlyTitle: 'Mejor en un ordenador',
+  desktopOnlyBody:
+    'Esta aplicación está pensada para pantallas de escritorio. Ábrela en un ordenador para configurar tus recordatorios.',
+
   aboutEyebrow: 'A tu ritmo',
   aboutTitle: 'Un recordatorio de agua que se adapta a tu día',
   aboutBody:
